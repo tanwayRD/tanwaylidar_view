@@ -41,6 +41,8 @@ struct PointXYZ
 	float z;
 	int channel;
 	//float intensity;
+	unsigned int t_sec;         /* The value represents seconds since 1900-01-01 00:00:00 (the UNIX epoch).*/ 
+	unsigned int t_usec;        /* remaining microseconds */
 };
 
 void pointCloudCallback(TWPointCloud<PointXYZ>::Ptr pointCloud)
@@ -81,20 +83,20 @@ int main()
 	*Real-time connection using lidar. 
 	*If you have PCL installed, you can also use the point type 'pcl::PointXYZI' like this 'TanwayLidarSDK<pcl::PointXYZI> lidar';
 	*/
-	TanwayLidarSDK<PointXYZ> lidar("192.168.111.51", "192.168.111.204", 5600, LT_TensorPro);
-	lidar.RegPointCloudCallback(pointCloudCallback);
-	lidar.RegGPSCallback(gpsCallback);
-	lidar.RegExceptionCallback(exceptionCallback);
-	lidar.Start();
-
-	/*
-	*using pcap file to replay.
-	*/
-	//TanwayLidarSDK<PointXYZ> lidar("./testTensorPro.pcap", "192.168.111.51", 5600, LT_TensorPro, true);
+	//TanwayLidarSDK<PointXYZ> lidar("192.168.111.51", "192.168.111.204", 5600, LT_TensorPro);
 	//lidar.RegPointCloudCallback(pointCloudCallback);
 	//lidar.RegGPSCallback(gpsCallback);
 	//lidar.RegExceptionCallback(exceptionCallback);
 	//lidar.Start();
+
+	/*
+	*using pcap file to replay.
+	*/
+	TanwayLidarSDK<PointXYZ> lidar("./testTensorPro.pcap", "192.168.111.51", 5600, LT_TensorPro, true);
+	lidar.RegPointCloudCallback(pointCloudCallback);
+	lidar.RegGPSCallback(gpsCallback);
+	lidar.RegExceptionCallback(exceptionCallback);
+	lidar.Start();
 	
 
 	//quit

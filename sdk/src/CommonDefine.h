@@ -59,9 +59,34 @@ struct TWUDPPackage
 {
 	typedef std::shared_ptr<TWUDPPackage> Ptr;
 
-	TWUDPPackage() :m_length(0) {}
+	TWUDPPackage() :m_length(0) {
+#ifdef __linux__
+		timeval start;
+		gettimeofday(&start, NULL);
+		t_sec = start.tv_sec;
+		t_usec = start.tv_usec;
+#elif _WIN32
+		time_t clock;
+		struct tm tm;
+		SYSTEMTIME wtm;
+		GetLocalTime(&wtm);
+		tm.tm_year = wtm.wYear - 1900;
+		tm.tm_mon = wtm.wMonth - 1;
+		tm.tm_mday = wtm.wDay;
+		tm.tm_hour = wtm.wHour;
+		tm.tm_min = wtm.wMinute;
+		tm.tm_sec = wtm.wSecond;
+		tm.tm_isdst = -1;
+		clock = mktime(&tm);
+		t_sec = (long)clock;
+		t_usec = wtm.wMilliseconds * 1000;
+#endif
+	}
 	char m_szData[UDP_MAX_LENGTH];
 	int m_length;
+	//time
+	unsigned int t_sec; 
+	unsigned int t_usec; 
 };
 
 template <typename PointT>
@@ -79,6 +104,7 @@ struct __attribute__((aligned(16))) TWPointCloud
 
 	uint32_t height = 0;
 	uint32_t width = 0;
+	uint64_t stamp = 0;
 	std::string frame_id = "TanwayTP";
 
 	TWPointData m_pointData;

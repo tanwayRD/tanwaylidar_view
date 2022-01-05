@@ -42,7 +42,9 @@ void pointCloudCallback(TWPointCloud<pcl::PointXYZI>::Ptr twPointCloud)
 	//to ros point cloud
 	sensor_msgs::PointCloud2 rosPointCloud; 
 	pcl::toROSMsg(cloud, rosPointCloud); //convert between PCL and ROS datatypes
-	rosPointCloud.header.stamp = ros::Time::now(); //Get ROS system time
+	//rosPointCloud.header.stamp = ros::Time::now(); //Get ROS system time
+	rosPointCloud.header.stamp.sec = (twPointCloud->stamp)/1000000;
+	rosPointCloud.header.stamp.nsec = (twPointCloud->stamp)%1000000 * 1000;
 	rosPublisher.publish(rosPointCloud); //Publish cloud
 }
 

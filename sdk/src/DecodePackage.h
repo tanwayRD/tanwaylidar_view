@@ -55,6 +55,8 @@ MemberCheck(echo)
 MemberCheck(sepIndex)
 MemberCheck(faceIndex)
 MemberCheck(color)
+MemberCheck(t_sec)
+MemberCheck(t_usec)
 
 #define PointT_HsaMember(C, member) has_member_##member<C>::value
 
@@ -80,15 +82,15 @@ private:
 	void BeginDecodePackageData();
 	
 
-	void DecodeTensorLite(char* udpData);
-	void DecodeTensorPro(char* udpData);
-	void DecodeTensorPro_echo2(char* udpData);
+	void DecodeTensorLite(char* udpData, unsigned int t_sec, unsigned int t_usec);
+	void DecodeTensorPro(char* udpData, unsigned int t_sec, unsigned int t_usec);
+	void DecodeTensorPro_echo2(char* udpData, unsigned int t_sec, unsigned int t_usec);
 	void DecodeScope(char* udpData);
 
 	void DecodeGPSData(char* udpData);	//decode gps date
 
 protected:
-	virtual void UseDecodePointPro(int echo, double horAngle, int channel, float hexL, float hexPulseWidth, int offset, char* data);
+	virtual void UseDecodePointPro(int echo, double horAngle, int channel, float hexL, float hexPulseWidth, int offset, char* data, unsigned int t_sec, unsigned int t_usec);
 	virtual void UseDecodePointScope(int echo, int sepIndex, int faceIndex, double horAngle, int channel, float hexL, float hexPulseWidth);
 	virtual void ProcessPointCloud(){};
 
@@ -263,6 +265,28 @@ inline typename std::enable_if<PointT_HsaMember(PointT, color)>::type setColor(P
 }
 
 template <typename PointT>
+inline typename std::enable_if<!PointT_HsaMember(PointT, t_sec)>::type setT_sec(PointT& point, const unsigned int& value)
+{
+}
+
+template <typename PointT>
+inline typename std::enable_if<PointT_HsaMember(PointT, t_sec)>::type setT_sec(PointT& point, const unsigned int& value)
+{
+	point.t_sec = value;
+}
+
+template <typename PointT>
+inline typename std::enable_if<!PointT_HsaMember(PointT, t_usec)>::type setT_usec(PointT& point, const unsigned int& value)
+{
+}
+
+template <typename PointT>
+inline typename std::enable_if<PointT_HsaMember(PointT, t_usec)>::type setT_usec(PointT& point, const unsigned int& value)
+{
+	point.t_usec = value;
+}
+
+template <typename PointT>
 void DecodePackage<PointT>::Start()
 {
 	run_decode.store(true);
@@ -314,7 +338,7 @@ void DecodePackage<PointT>::BeginDecodePackageData()
 		{
 		case LT_TensorLite:
 			if (packagePtr->m_length == 1440)
-				DecodeTensorLite(packagePtr->m_szData);
+				DecodeTensorLite(packagePtr->m_szData, packagePtr->t_sec, packagePtr->t_usec);
 			else
 			{
 				USE_EXCEPTION_TIPS(TWException::TWEC_TIPS_NOMATCH_DEVICE, "Lidar type and protocol data do not match!");
@@ -322,7 +346,7 @@ void DecodePackage<PointT>::BeginDecodePackageData()
 			break;
 		case LT_TensorPro:
 			if (packagePtr->m_length == 1440)
-				DecodeTensorPro(packagePtr->m_szData);
+				DecodeTensorPro(packagePtr->m_szData, packagePtr->t_sec, packagePtr->t_usec);
 			else
 			{
 				USE_EXCEPTION_TIPS(TWException::TWEC_TIPS_NOMATCH_DEVICE, "Lidar type and protocol data do not match!");
@@ -330,7 +354,7 @@ void DecodePackage<PointT>::BeginDecodePackageData()
 			break;
 		case LT_TensorPro_echo2:
 			if (packagePtr->m_length == 1440)
-				DecodeTensorPro_echo2(packagePtr->m_szData);
+				DecodeTensorPro_echo2(packagePtr->m_szData, packagePtr->t_sec, packagePtr->t_usec);
 			else
 			{
 				USE_EXCEPTION_TIPS(TWException::TWEC_TIPS_NOMATCH_DEVICE, "Lidar type and protocol data do not match!");
@@ -357,7 +381,7 @@ void DecodePackage<PointT>::BeginDecodePackageData()
 }
 
 template <typename PointT>
-void DecodePackage<PointT>::UseDecodePointPro(int echo, double horAngle, int channel, float hexL, float hexPulseWidth, int offset, char* data)
+void DecodePackage<PointT>::UseDecodePointPro(int echo, double horAngle, int channel, float hexL, float hexPulseWidth, int offset, char* data, unsigned int t_sec, unsigned int t_usec)
 {
 	//distance
 	double L = hexL * m_calSimple;
@@ -382,6 +406,8 @@ void DecodePackage<PointT>::UseDecodePointPro(int echo, double horAngle, int cha
 	setChannel(basic_point, channel);
 	setAngle(basic_point, static_cast<float>(horAngle));
 	setEcho(basic_point, echo);
+	setT_sec(basic_point, t_sec);
+	setT_usec(basic_point, t_usec);
 
 	m_pointCloutPtr->PushBack(basic_point);
 
@@ -475,14 +501,21 @@ void DecodePackage<PointT>::DecodeGPSData(char* udpData)
 }
 
 template <typename PointT>
-void DecodePackage<PointT>::DecodeTensorLite(char* udpData)
+void DecodePackage<PointT>::DecodeTensorLite(char* udpData, unsigned int t_sec, unsigned int t_usec)
 {
-	DecodeTensorPro(udpData);
+	DecodeTensorPro(udpData, t_sec, t_usec);
 }
 
 template <typename PointT>
-void DecodePackage<PointT>::DecodeTensorPro(char* udpData)
+void DecodePackage<PointT>::DecodeTensorPro(char* udpData, unsigned int t_sec, unsigned int t_usec)
 {
+	//检查微秒数是否满足减法
+	if (20 * 29.4 > t_usec)
+	{
+
+	}
+
+
 	for (int blocks_num = 0; blocks_num < 20; blocks_num++)
 	{
 		int offset = blocks_num * 72;
@@ -495,6 +528,7 @@ void DecodePackage<PointT>::DecodeTensorPro(char* udpData)
 		{
 			m_pointCloutPtr->height = 1;
 			m_pointCloutPtr->width = m_pointCloutPtr->Size();
+			m_pointCloutPtr->stamp = (uint64_t)t_sec * 1000 * 1000 + t_usec;
 
 			std::lock_guard<std::mutex> lock(*m_mutex);
 			if (m_funcPointCloud) m_funcPointCloud(m_pointCloutPtr);
@@ -517,8 +551,21 @@ void DecodePackage<PointT>::DecodeTensorPro(char* udpData)
 			//channel 1-16
 			int channel = seq + 1;
 
+			//修改点的时间
+			unsigned int cur_sec = t_sec;
+			unsigned int cur_usec = t_usec;
+			if (t_usec < blocks_num * 29.4) //两列之间的时间间隔29.4微妙
+			{
+				cur_sec = cur_usec - 1;
+				cur_usec = (unsigned int)(t_usec + 1000000 - blocks_num * 29.4);
+			}
+			else
+			{
+				cur_usec = (unsigned int)(t_usec - blocks_num * 29.4);
+			}
+
 			//using
-			UseDecodePointPro(1, horizontalAngle, channel, hexL, hexPlusWidth, offset, udpData);
+			UseDecodePointPro(1, horizontalAngle, channel, hexL, hexPlusWidth, offset, udpData, cur_sec, cur_usec);
 
 			seq++;
 		}
@@ -526,7 +573,7 @@ void DecodePackage<PointT>::DecodeTensorPro(char* udpData)
 }
 
 template <typename PointT>
-void DecodePackage<PointT>::DecodeTensorPro_echo2(char* udpData)
+void DecodePackage<PointT>::DecodeTensorPro_echo2(char* udpData, unsigned int t_sec, unsigned int t_usec)
 {
 	for (int blocks_num = 0; blocks_num < 20; blocks_num++)
 	{
@@ -563,7 +610,7 @@ void DecodePackage<PointT>::DecodeTensorPro_echo2(char* udpData)
 			int channel = seq + 1;
 
 			//using
-			UseDecodePointPro(blocks_num%2 + 1, horizontalAngle, channel, hexL, hexPlusWidth, offset, udpData);
+			UseDecodePointPro(blocks_num%2 + 1, horizontalAngle, channel, hexL, hexPlusWidth, offset, udpData, t_sec, t_usec);
 
 			seq++;
 		}

@@ -195,6 +195,8 @@ void PcapReader::ThreadLoadProcess()
 			//data pack
 			TWUDPPackage::Ptr udp_data(new TWUDPPackage);
 			udp_data->m_length = udp_hdr.GetLength() - sizeof(UDPHdr);
+			udp_data->t_sec = pcap_pkt_hdr.tv_sec;
+			udp_data->t_usec = pcap_pkt_hdr.tv_usec;
 			readSize = inStream.read(udp_data->m_szData, udp_data->m_length).gcount();
 			if (readSize != udp_data->m_length)
 			{
