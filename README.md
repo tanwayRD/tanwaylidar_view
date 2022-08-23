@@ -127,3 +127,4 @@ rosrun tanwaylidar_view tensorpro_interfaces
 | tanwaylidar_view v2.0.4 | 2022年03月26日 | 修改Scope-192默认组修正角度值，更新跨平台SDK版本到1.0.4 |
 | tanwaylidar_view v2.0.5 | 2022年04月20日 | 更新sdk版本，增加对Duetto设备的支持，更新跨平台SDK版本到1.0.5 |
 | tanwaylidar_view v2.0.6 | 2022年06月23日 | 更新跨平台SDK版本到1.0.6 |
+| tanwaylidar_view v2.0.6.1 | 2022年08月23日 | 增加100ms固定点云触发时间 |
