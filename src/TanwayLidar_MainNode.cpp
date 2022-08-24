@@ -3,7 +3,7 @@
  *  License:　BSD 3-Clause License
  *
  *  Created on: 16-01-2021
- *  Edited on: 15-03-2022
+ *  Edited on: 23-08-2022
  *  Author: LN
 
  *  Node for Tanway 3D LIDARs   
@@ -19,6 +19,8 @@
 #include <pcl/conversions.h>
 
 ros::Publisher rosPublisher;
+TWPointCloud<pcl::PointXYZI>::Ptr lastPointCloudPtr = std::make_shared<TWPointCloud<pcl::PointXYZI>>();
+int recv_flag = 0x7FFFFFFF;
 
 void pointCloudCallback(TWPointCloud<pcl::PointXYZI>::Ptr twPointCloud)
 {
@@ -32,18 +34,8 @@ void pointCloudCallback(TWPointCloud<pcl::PointXYZI>::Ptr twPointCloud)
 	//		  << " point cloud size: " << twPointCloud->Size() << std::endl;
 	
 	
-	//to pcl point cloud
-	pcl::PointCloud<pcl::PointXYZI> cloud;
-	cloud.width = twPointCloud->width;
-	cloud.height = twPointCloud->height;
-	cloud.header.frame_id = twPointCloud->frame_id;
-	cloud.points.assign(twPointCloud->m_pointData.begin(), twPointCloud->m_pointData.end());
-
-	//to ros point cloud
-	sensor_msgs::PointCloud2 rosPointCloud; 
-	pcl::toROSMsg(cloud, rosPointCloud); //convert between PCL and ROS datatypes
-	rosPointCloud.header.stamp = ros::Time::now(); //Get ROS system time
-	rosPublisher.publish(rosPointCloud); //Publish cloud
+	lastPointCloudPtr = twPointCloud;
+	recv_flag = 1;
 }
 
 void gpsCallback(std::string gps_value)
@@ -76,7 +68,7 @@ int main(int argc, char** argv)
 	ros::NodeHandle nh_private("~");
 
 	ROS_INFO( "tanway lidar viewer for ROS" );
-	ROS_INFO( "Update Date: 2022/04/20\n" );
+	ROS_INFO( "Update Date: 2022/08/23\n" );
 	ROS_INFO( "View in rviz");
 
 	//读取Launch配置文件
@@ -97,9 +89,41 @@ int main(int argc, char** argv)
 	
 	lidar.Start();
 
+	std::chrono::time_point<std::chrono::system_clock> beginPlayTime = std::chrono::system_clock::now();
 	while (ros::ok())
 	{
-		std::this_thread::sleep_for(std::chrono::seconds(1));
+		std::this_thread::sleep_for(std::chrono::microseconds(0));
+		std::chrono::time_point<std::chrono::system_clock> endPlayTime = std::chrono::system_clock::now();
+		std::chrono::duration<double, std::micro> tm = endPlayTime - beginPlayTime;
+		double tm_count = tm.count();
+		if (tm_count >= 100000)
+		{
+			beginPlayTime = endPlayTime;
+			if (recv_flag++ >= 5)
+			{
+				recv_flag = 5;
+				continue;
+			}
+			
+			//to pcl point cloud
+			TWPointCloud<pcl::PointXYZI>::Ptr twPointCloud = lastPointCloudPtr;
+			pcl::PointCloud<pcl::PointXYZI> cloud;
+			cloud.width = twPointCloud->width;
+			cloud.height = twPointCloud->height;
+			cloud.header.frame_id = twPointCloud->frame_id;
+			cloud.points.assign(twPointCloud->m_pointData.begin(), twPointCloud->m_pointData.end());
+
+			//to ros point cloud
+			sensor_msgs::PointCloud2 rosPointCloud; 
+			pcl::toROSMsg(cloud, rosPointCloud); //convert between PCL and ROS datatypes
+			rosPointCloud.header.stamp = ros::Time::now(); //Get ROS system time
+			rosPublisher.publish(rosPointCloud); //Publish cloud
+			
+		}
+		if (tm_count < 60000)
+		{
+			std::this_thread::sleep_for(std::chrono::microseconds(1));
+		}
 	}
 
 	return 0;
