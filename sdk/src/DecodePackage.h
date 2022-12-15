@@ -129,6 +129,7 @@ protected:
 protected:
 	int FourHexToInt(unsigned char high, unsigned char highmiddle, unsigned char middle, unsigned char low);
 	int TwoHextoInt(unsigned char high, unsigned char low);
+	void OutlierFilter_TSP0332(double& L_1, const char* udpData, int blocksNum, int seq, float intervalAngle, bool bValidPointSeq[16]);
 
 public:
 	double m_startAngle = 30.0;
@@ -276,6 +277,43 @@ int DecodePackage<PointT>::FourHexToInt(unsigned char high, unsigned char highmi
 	addr |= ((highmiddle << 16) & 0xFF0000);
 	addr |= ((high << 24) & 0xFF000000);
 	return addr;
+}
+
+template <typename PointT>
+void DecodePackage<PointT>::OutlierFilter_TSP0332(double& L_1, const char* udpData, int blocksNum, int seq, float intervalAngle, bool bValidPointSeq[16])
+{
+	if (bValidPointSeq[seq]) return;
+
+	int offset_block = blocksNum * 72;
+	float maxDistance_L1 = 0.1;
+
+	if (seq <= 11)
+	{
+		double dDistances[5] = { L_1, 0, 0, 0, 0 };
+		for (int i=1; i<5; i++)
+		{
+			//seq=1.2.3.4
+			double hexL1 = TwoHextoInt(udpData[offset_block + (seq + i) * 4 + 0], udpData[offset_block + (seq + i) * 4 + 1]);
+			dDistances[i] = hexL1 * m_calSimple;
+		}
+		if (abs(dDistances[1] - dDistances[0]) <= maxDistance_L1 &&
+			abs(dDistances[2] - dDistances[0]) <= maxDistance_L1 &&
+			abs(dDistances[3] - dDistances[0]) <= maxDistance_L1 &&
+			abs(dDistances[4] - dDistances[0]) <= maxDistance_L1)
+		{
+			bValidPointSeq[seq] = true;
+			bValidPointSeq[seq + 1] = true;
+			bValidPointSeq[seq + 2] = true;
+			bValidPointSeq[seq + 3] = true;
+			bValidPointSeq[seq + 4] = true;
+		}
+		else
+		{
+			L_1 = 0;
+		}
+	}
+	else
+		L_1 = 0;
 }
 
 template <typename PointT>
@@ -757,6 +795,7 @@ void DecodePackage<PointT>::UseDecodeTensorPro0332(char* udpData, std::vector<TW
 		}
 
 		int seq = 0;
+		bool bValidPointSeq[16] = { false };
 		while (seq < 16)
 		{
 			unsigned short  hexL = TwoHextoInt(udpData[offset + seq * 4 + 0], udpData[offset + seq * 4 + 1]);
@@ -764,6 +803,11 @@ void DecodePackage<PointT>::UseDecodeTensorPro0332(char* udpData, std::vector<TW
 
 			double L = hexL * m_calSimple;
 			double pulse = hexPulse * m_calPulse;
+
+			if (L <= 2)
+			{
+				OutlierFilter_TSP0332(L, udpData, blocks_num,	 seq, 0.7, bValidPointSeq);
+			}
 
 			//计算
 			double cos_vA_RA = m_verticalChannelAngle16_cos_vA_RA[seq];

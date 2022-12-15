@@ -21,6 +21,7 @@
 ros::Publisher rosPublisher;
 TWPointCloud<pcl::PointXYZI>::Ptr lastPointCloudPtr = std::make_shared<TWPointCloud<pcl::PointXYZI>>();
 int recv_flag = 0x7FFFFFFF;
+std::mutex m_mutex;
 
 void pointCloudCallback(TWPointCloud<pcl::PointXYZI>::Ptr twPointCloud)
 {
@@ -33,7 +34,7 @@ void pointCloudCallback(TWPointCloud<pcl::PointXYZI>::Ptr twPointCloud)
 	//		  << " height:" << twPointCloud->height 
 	//		  << " point cloud size: " << twPointCloud->Size() << std::endl;
 	
-	
+	std::lock_guard<std::mutex> lock(m_mutex);
 	lastPointCloudPtr = twPointCloud;
 	recv_flag = 1;
 }
@@ -106,7 +107,11 @@ int main(int argc, char** argv)
 			}
 			
 			//to pcl point cloud
-			TWPointCloud<pcl::PointXYZI>::Ptr twPointCloud = lastPointCloudPtr;
+			TWPointCloud<pcl::PointXYZI>::Ptr twPointCloud;
+			{
+				std::lock_guard<std::mutex> lock(m_mutex);
+				twPointCloud = lastPointCloudPtr;
+			}
 			pcl::PointCloud<pcl::PointXYZI> cloud;
 			cloud.width = twPointCloud->width;
 			cloud.height = twPointCloud->height;
