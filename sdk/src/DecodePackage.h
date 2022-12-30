@@ -140,6 +140,7 @@ protected:
 	int GetDuettoBlockNumber(double angle, int mirror, int lORr);
 	bool IsEqualityFloat3(const double value1, const double value2);
 	bool IsEqualityFloat5(const double value1, const double value2);
+	void OutlierFilter_Scope_USE5CH(double& L, const char* udpData, int blocksNum, int seq, int channel, float sequenceFilterThreshold, bool bValidPointChannel[64]);
 
 public:
 	double m_startAngle = 30.0;
@@ -378,6 +379,79 @@ bool DecodePackage<PointT>::IsEqualityFloat5(const double value1, const double v
 	return fabs(value1 - value2) < 0.00001;
 }
 
+template <typename PointT>
+void DecodePackage<PointT>::OutlierFilter_Scope_USE5CH(double& L, const char* udpData, int blocksNum, int seq, int channel, float sequenceFilterThreshold, bool bValidPointChannel[64])
+{
+	int t_channel = 65 - channel - 1;
+	double dDistances[6] = { L, 0, 0, 0, 0, 0 };
+	int offset = blocksNum * 140;
+	if (3 == blocksNum || 7 == blocksNum)
+	{
+		if (seq <= 10)
+		{
+			for (int i = 1; i < 6; i++)
+			{
+				double hexToInt1 = TwoHextoInt(udpData[offset + (seq + i) * 8 + 0], udpData[offset + (seq + i) * 8 + 1]);
+				dDistances[i] = hexToInt1 * m_calSimple;
+			}
+		}
+		else
+		{
+			if (! bValidPointChannel[t_channel])
+				L = 0;
+			return;
+		}
+	}
+	else 
+	{
+		if (seq <= 10)
+		{
+			for (int i = 1; i < 6; i++)
+			{
+				double hexToInt1 = TwoHextoInt(udpData[offset + (seq + i) * 8 + 0], udpData[offset + (seq + i) * 8 + 1]);
+				dDistances[i] = hexToInt1 * m_calSimple;
+			}
+		}
+		else
+		{
+			for (int i = 1; i < 15 - seq + 1; i++)
+			{
+				double hexToInt1 = TwoHextoInt(udpData[offset + (seq + i) * 8 + 0], udpData[offset + (seq + i) * 8 + 1]);
+				dDistances[i] = hexToInt1 * m_calSimple;
+			}
+			offset = (blocksNum + 1) * 140;
+			for (int i = 0; i < 6 - (15 - seq + 1); i++)
+			{
+				double hexToInt1 = TwoHextoInt(udpData[offset + (seq + i) * 8 + 0], udpData[offset + (seq + i) * 8 + 1]);
+				dDistances[(15 - seq + 1) + i] = hexToInt1 * m_calSimple;
+			}
+		}
+	}
+	float min = dDistances[0];
+	float max = dDistances[0];
+	for (int i=1; i<6; i++)
+	{
+		if (dDistances[i] < min)
+			min = dDistances[i];
+		if (dDistances[i] > max)
+			max = dDistances[i];
+	}
+
+	if (max - min <= sequenceFilterThreshold)
+	{
+		bValidPointChannel[t_channel] = true;
+		bValidPointChannel[t_channel + 1] = true;
+		bValidPointChannel[t_channel + 2] = true;
+		bValidPointChannel[t_channel + 3] = true;
+		bValidPointChannel[t_channel + 4] = true;
+		bValidPointChannel[t_channel + 5] = true;
+	}
+	else
+	{
+		if (!bValidPointChannel[t_channel])
+			L = 0;
+	}
+}
 
 template <typename PointT>
 inline typename std::enable_if<!PointT_HasMember(PointT, x)>::type setX(PointT& point, const float& value)
@@ -1139,12 +1213,16 @@ void DecodePackage<PointT>::UseDecodeScopeMiniA2_192(char* udpData, std::vector<
 	double y_cal_2 = 0.0;
 	double z_cal_1 = 0.0;
 	double z_cal_2 = 0.0;
-	
+	bool bValidPointSeq[64] = { false };
 	for (int blocks_num = 0; blocks_num < 8; blocks_num++)
 	{
 		int offset = blocks_num * 140;
 		if (0 == blocks_num || 4 == blocks_num)
 		{
+			for (int i = 0; i < 64; i++)
+			{
+				bValidPointSeq[i] = false;
+			}
 			//horizontal angle index: 128-131
 			int HextoAngle = FourHexToInt(udpData[offset + 128], udpData[offset + 129], udpData[offset + 130], udpData[offset + 131]);
 			horizontalAngle = HextoAngle  * 0.00001;
@@ -1205,6 +1283,9 @@ void DecodePackage<PointT>::UseDecodeScopeMiniA2_192(char* udpData, std::vector<
 			double pulse_2 = hexPulse2 * m_calPulse;
 
 			int channel = 65 - (16 * (blocks_num >= 4 ? blocks_num - 4 : blocks_num) + seq + 1);
+
+			if (L_1 > 0 && L_1 <= 4.0)
+				OutlierFilter_Scope_USE5CH(L_1, udpData, blocks_num, seq, channel, 0.15, bValidPointSeq);
 
 			double cos_vA_RA = m_verticalChannelAngle_ScopeMiniA2_cos_vA_RA[channel - 1];
 			double sin_vA_RA = m_verticalChannelAngle_ScopeMiniA2_sin_vA_RA[channel - 1];
