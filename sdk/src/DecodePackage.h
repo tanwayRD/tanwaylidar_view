@@ -129,7 +129,7 @@ protected:
 protected:
 	int FourHexToInt(unsigned char high, unsigned char highmiddle, unsigned char middle, unsigned char low);
 	int TwoHextoInt(unsigned char high, unsigned char low);
-	void OutlierFilter_TSP0332(double& L_1, const char* udpData, int blocksNum, int seq, float intervalAngle, bool bValidPointSeq[16]);
+	void OutlierFilter_TSP0332(double& L, const char* udpData, int blocksNum, int seq, float sequenceFilterThreshold, bool* bValidPointSeq16);
 
 public:
 	double m_startAngle = 30.0;
@@ -280,40 +280,51 @@ int DecodePackage<PointT>::FourHexToInt(unsigned char high, unsigned char highmi
 }
 
 template <typename PointT>
-void DecodePackage<PointT>::OutlierFilter_TSP0332(double& L_1, const char* udpData, int blocksNum, int seq, float intervalAngle, bool bValidPointSeq[16])
+void DecodePackage<PointT>::OutlierFilter_TSP0332(double& L, const char* udpData, int blocksNum, int seq, float sequenceFilterThreshold, bool* bValidPointSeq16)
 {
-	if (bValidPointSeq[seq]) return;
+		int offset_block = blocksNum * 72;
+#define ContinuousPointClout 9
 
-	int offset_block = blocksNum * 72;
-	float maxDistance_L1 = 0.1;
+	double dDistances[ContinuousPointClout] = {0 };
+	dDistances[0] = L;
 
-	if (seq <= 11)
+	if (seq <= (16- ContinuousPointClout))
 	{
-		double dDistances[5] = { L_1, 0, 0, 0, 0 };
-		for (int i=1; i<5; i++)
+		for (int i=1; i<ContinuousPointClout; i++)
 		{
-			//seq=1.2.3.4
 			double hexL1 = TwoHextoInt(udpData[offset_block + (seq + i) * 4 + 0], udpData[offset_block + (seq + i) * 4 + 1]);
 			dDistances[i] = hexL1 * m_calSimple;
 		}
-		if (abs(dDistances[1] - dDistances[0]) <= maxDistance_L1 &&
-			abs(dDistances[2] - dDistances[0]) <= maxDistance_L1 &&
-			abs(dDistances[3] - dDistances[0]) <= maxDistance_L1 &&
-			abs(dDistances[4] - dDistances[0]) <= maxDistance_L1)
+	}
+	else
+	{
+		if (!(bValidPointSeq16[seq]))
+			L = 0;
+		return;
+	}
+
+	float min = dDistances[0];
+	float max = dDistances[0];
+	for (int i = 1; i < ContinuousPointClout; i++)
+	{
+		if (dDistances[i] < min)
+			min = dDistances[i];
+		if (dDistances[i] > max)
+			max = dDistances[i];
+	}
+
+	if (max - min <= sequenceFilterThreshold)
+	{
+		for (int si = 0; si<ContinuousPointClout; si++)
 		{
-			bValidPointSeq[seq] = true;
-			bValidPointSeq[seq + 1] = true;
-			bValidPointSeq[seq + 2] = true;
-			bValidPointSeq[seq + 3] = true;
-			bValidPointSeq[seq + 4] = true;
-		}
-		else
-		{
-			L_1 = 0;
+			bValidPointSeq16[seq + si] = true;
 		}
 	}
 	else
-		L_1 = 0;
+	{
+		if (!bValidPointSeq16[seq])
+			L = 0;
+	}
 }
 
 template <typename PointT>
@@ -804,9 +815,9 @@ void DecodePackage<PointT>::UseDecodeTensorPro0332(char* udpData, std::vector<TW
 			double L = hexL * m_calSimple;
 			double pulse = hexPulse * m_calPulse;
 
-			if (L <= 2)
+			if (L <= 2 && L > 0)
 			{
-				OutlierFilter_TSP0332(L, udpData, blocks_num,	 seq, 0.7, bValidPointSeq);
+				OutlierFilter_TSP0332(L, udpData, blocks_num, seq,  0.07, bValidPointSeq);
 			}
 
 			//计算
