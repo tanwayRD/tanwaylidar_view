@@ -54,6 +54,11 @@ void LaunchConfig::ReadLaunchParams(ros::NodeHandle& nh_private)
 		nh_private.param<double>("CorrectedAngle1", m_correctedAngle1, 0);
 		nh_private.param<double>("CorrectedAngle2", m_correctedAngle2, 0.1);
 		nh_private.param<double>("CorrectedAngle3", m_correctedAngle3, 0.2);
+
+		nh_private.param<double>("InstallRotateX", m_installRotateX, 0.0);
+		nh_private.param<double>("InstallRotateY", m_installRotateY, 0.0);
+		nh_private.param<double>("InstallRotateZ", m_installRotateZ, 0.0);
+		nh_private.param<double>("InstallMoveZ", m_installMoveZ, 999.0);
 	}
 	else if (LT_Duetto == m_lidarType)
 	{

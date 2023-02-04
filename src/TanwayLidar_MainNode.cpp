@@ -146,7 +146,27 @@ int main(int argc, char** argv)
 	else if (LT_Scope192 == launchConfig.m_lidarType)
 		lidar.SetCorrectedAngleToScope192(launchConfig.m_correctedAngle1, launchConfig.m_correctedAngle2, launchConfig.m_correctedAngle3);
 	else if (LT_ScopeMiniA2_192 == launchConfig.m_lidarType)
+	{
+		//filter plane
+		Eigen::Vector3d vN(0, 0, 1);
+		//Rotate X
+		Eigen::AngleAxisd angle_axis_x(3.14159265359 / 180 * launchConfig.m_installRotateX, Eigen::Vector3d(1, 0, 0));
+		Eigen::Vector3d rotated_vN_x = angle_axis_x.matrix()*vN;
+		//Rotate Y
+		Eigen::AngleAxisd angle_axis_y(3.14159265359 / 180 * launchConfig.m_installRotateY, Eigen::Vector3d(0, 1, 0));
+		Eigen::Vector3d rotated_vN_xy = angle_axis_y.matrix()*rotated_vN_x;
+		//Rotate Z
+		Eigen::AngleAxisd angle_axis_z(3.14159265359 / 180 * launchConfig.m_installRotateZ, Eigen::Vector3d(0, 0, 1));
+		Eigen::Vector3d rotated_vN_xyz = angle_axis_z.matrix()*rotated_vN_xy;
+		//plane
+		double plane_a = rotated_vN_xyz.x();
+		double plane_b = rotated_vN_xyz.y();
+		double plane_c = rotated_vN_xyz.z();
+		double plane_d = rotated_vN_xyz.z() * launchConfig.m_installMoveZ;
+
+		lidar.SetInstallFilterPalne(plane_a, plane_b, plane_c, plane_d);
 		lidar.SetCorrectionAngleToScopeMiniA2_192(launchConfig.m_correctedAngle1, launchConfig.m_correctedAngle2, launchConfig.m_correctedAngle3);
+	}
 	else if (LT_Duetto == launchConfig.m_lidarType)
 		lidar.SetCorrectKBValueToDuetto(launchConfig.m_kValue, launchConfig.m_bValue);
 

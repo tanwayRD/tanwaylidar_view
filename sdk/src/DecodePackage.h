@@ -101,6 +101,7 @@ public:
 	void SetCorrectionAngleToScope192(float angle1, float angle2, float angle3);
 	void SetCorrectionAngleToScopeMiniA2_192(float angle1, float angle2, float angle3);
 	void SetCorrectKBValueToDuetto(double k, double b);
+	void SetInstallFilterPalne(double a, double b, double c, double d);
 	void SetMutex(std::mutex* mutex){ m_mutex = mutex; }
 
 private:
@@ -151,6 +152,9 @@ protected:
 	double m_calRA = (double)(3.14159265f / 180.0f);
 	double m_calPulse = 0.004577 / 0.15;
 	double m_calSimple = 500 * 2.997924 / 10.f / 16384.f / 2;
+
+	//filter plane
+	double m_filterPlane[4]={0.0, 0.0, 0.0, 999.0};
 
 	int m_blockNumberForDuetto[6] = {1/*RA*/, 2001/*RB*/, 4001/*RC*/, 3001/*LA*/, 5001/*LB*/, 1001/*LC*/ };
 
@@ -271,6 +275,14 @@ void DecodePackage<PointT>::RegExceptionCallback(const std::function<void(const 
 	m_funcException = callback;
 }
 
+template <typename PointT>
+void DecodePackage<PointT>::SetInstallFilterPalne(double a, double b, double c, double d)
+{
+	m_filterPlane[0] = a;
+	m_filterPlane[1] = b;
+	m_filterPlane[2] = c;
+	m_filterPlane[3] = d;
+}
 
 template <typename PointT>
 void DecodePackage<PointT>::SetCorrectKBValueToDuetto(double k, double b)
@@ -1943,6 +1955,8 @@ void DecodePackage<PointT>::DecodeScopeMiniA2_192(char* udpData)
 		if (oriPoint.angle <m_startAngle || oriPoint.angle > m_endAngle) continue;
 
 		if (oriPoint.distance <= 0) continue;
+
+		if (m_filterPlane[0]*oriPoint.x + m_filterPlane[1]*oriPoint.y + m_filterPlane[2]*oriPoint.z + m_filterPlane[3] < 0) continue;
 
 		PointT basic_point;
 		setX(basic_point, static_cast<float>(oriPoint.x));

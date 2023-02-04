@@ -143,3 +143,4 @@ rosrun tanwaylidar_view tensorpro_interfaces
 | tanwaylidar_view v2.1.3 | 2023年01月10日 | 更新跨平台SDK版本到1.1.2；修改Duetto设备型号的launch文件配置，增加K、B值设置参数； |
 | tanwaylidar_view v2.1.4 | 2023年01月10日 | 更新跨平台SDK版本到1.1.3； |
 | tanwaylidar_view v2.1.5 | 2023年01月30日 | 更新跨平台SDK版本到1.1.4； |
+| tanwaylidar_view v2.1.5.1.0 | 2023年01月31日 | 增加ScopeMiniA2-192型号的地面下点云滤除功能，配置launch文件中的安装角度参数； |

@@ -18,6 +18,17 @@
 		<param name="CorrectedAngle2" type="double" value="0.1" />	
 		<!--组修正角度值3-->
 		<param name="CorrectedAngle3" type="double" value="0.2" />	
+
+		<!--滤除相关配置参数-->
+		<!--X 安装角度误差，单位：度-->
+		<param name="InstallRotateX" type="double" value="0.0" />	
+		<!--Y 安装角度误差，单位：度-->
+		<param name="InstallRotateY" type="double" value="0.0" />	
+		<!--Z 安装角度误差，单位：度-->
+		<param name="InstallRotateZ" type="double" value="0.0" />	
+		<!--安装高度(距离地平面)，单位：米-->
+		<param name="InstallMoveZ" type="double" value="0.6" />	
+
 	</node>
 
 	<node name="rviz" pkg="rviz" type="rviz" args="-d $(find tanwaylidar_view)/rviz/tanwayrun.rviz" />

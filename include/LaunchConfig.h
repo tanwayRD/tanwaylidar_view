@@ -40,6 +40,12 @@ public:
 	double m_correctedAngle2 = 0;
 	double m_correctedAngle3 = 0;
 
+	//
+	double m_installRotateX = 0;
+	double m_installRotateY = 0;
+	double m_installRotateZ = 0;
+	double m_installMoveZ = 0;
+
 	double m_kValue = 1.0;
 	double m_bValue = 0.0;
 };

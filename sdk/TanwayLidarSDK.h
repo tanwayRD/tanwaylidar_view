@@ -82,7 +82,10 @@ public:
 	void SetCorrectedAngleToScope192(float angle1, float angle2, float angle3);
 	void SetCorrectionAngleToScopeMiniA2_192(float angle1, float angle2, float angle3);
 	void SetCorrectKBValueToDuetto(double k, double b);
-
+	/*
+	*Set filter setting config
+	*/
+	void SetInstallFilterPalne(double a, double b, double c, double d);
 	/*
 	*Register the point cloud callback function.
 	*/
@@ -162,6 +165,12 @@ void TanwayLidarSDK<PointT>::PausePcap(bool pause)
 {
 	if (m_pcapReaderPtr)
 		m_pcapReaderPtr->PausePcap(pause);
+}
+
+template <typename PointT>
+void TanwayLidarSDK<PointT>::SetInstallFilterPalne(double a, double b, double c, double d)
+{
+	m_decodePackagePtr->SetInstallFilterPalne(a, b, c, d);
 }
 
 template <typename PointT>
