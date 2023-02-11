@@ -805,9 +805,14 @@ void DecodePackage<PointT>::UseDecodeTensorPro0332(char* udpData, std::vector<TW
 			cur_usec = (unsigned int)(t_usec - blocks_num * 29.4);
 		}
 
-		int seq = 0;
+
 		bool bValidPointSeq[16] = { false };
-		while (seq < 16)
+		TWPointData SEQ_Point[16];
+		bool B_SEQ_Point[16] = { 0 };
+		float MaxPulse = 9.0f;
+		float crosstalkDeletePulse = 4.0f;
+		bool crosstalkFilter = true;
+		for (int seq = 0; seq < 16; seq++)
 		{
 			unsigned short  hexL = TwoHextoInt(udpData[offset + seq * 4 + 0], udpData[offset + seq * 4 + 1]);
 			unsigned short  hexPulse = TwoHextoInt(udpData[offset + seq * 4 + 2], udpData[offset + seq * 4 + 3]);
@@ -839,11 +844,83 @@ void DecodePackage<PointT>::UseDecodeTensorPro0332(char* udpData, std::vector<TW
 				basic_point.echo = 1;
 				basic_point.t_sec = cur_sec;
 				basic_point.t_usec = cur_usec;
-				pointCloud.push_back(std::move(basic_point));
+
+				if (crosstalkFilter)
+				{
+					if (pulse > MaxPulse)
+						B_SEQ_Point[basic_point.channel - 1] = true;
+					else
+						B_SEQ_Point[basic_point.channel - 1] = false;
+
+					SEQ_Point[basic_point.channel - 1] = basic_point;
+				}
+				else
+				{
+					pointCloud.push_back(std::move(basic_point));
+				}
+			}
+		}
+		
+		//calculate crosstalk
+		if (crosstalkFilter)
+		{
+			bool hasCrosstalk = false;
+			double disCrosstalk = 0.f;
+			double pulseCrosstalk = 0;
+			int countCrosstalk = 0;
+
+			for (int i = 1; i < 16; i++)
+			{
+				if (1 == i)
+				{
+					if (B_SEQ_Point[i - 1] && B_SEQ_Point[i] &&
+						fabs(SEQ_Point[i - 1].distance - SEQ_Point[i].distance) < (0.0488*SEQ_Point[i].distance)) //sin(0.7°*4)*d1*tan(45°)
+					{
+						hasCrosstalk = true;
+						countCrosstalk++;
+						pulseCrosstalk += SEQ_Point[i].pulse;
+						disCrosstalk += SEQ_Point[i].distance;
+					}
+				}
+				else
+				{
+					if ((B_SEQ_Point[i - 1] && B_SEQ_Point[i] && fabs(SEQ_Point[i - 1].distance - SEQ_Point[i].distance) < (0.0488*SEQ_Point[i].distance)) ||
+						B_SEQ_Point[i - 2] && B_SEQ_Point[i] && fabs(SEQ_Point[i - 2].distance - SEQ_Point[i].distance) < (0.0488*SEQ_Point[i].distance)
+						)
+					{
+						hasCrosstalk = true;
+						countCrosstalk++;
+						pulseCrosstalk += SEQ_Point[i].pulse;
+						disCrosstalk += SEQ_Point[i].distance;
+					}
+				}
 			}
 
-			seq++;
+			//average value
+			if (hasCrosstalk)
+			{
+				disCrosstalk = disCrosstalk / countCrosstalk;
+				pulseCrosstalk = pulseCrosstalk / countCrosstalk;
+				if (pulseCrosstalk > MaxPulse + crosstalkDeletePulse)
+				{
+					pulseCrosstalk = MaxPulse;
+				}
+			}
+
+			//calculate distance
+			for (int k = 0; k < 16; k++)
+			{
+				if (hasCrosstalk &&
+					(pulseCrosstalk - SEQ_Point[k].pulse) > crosstalkDeletePulse &&
+					fabs(SEQ_Point[k].distance - disCrosstalk) < (0.0488*disCrosstalk * 1 * 2)) //sin(0.7° * 4)*ds*tan(45°)
+				{
+					SEQ_Point[k].distance = 0;
+				}
+
+				pointCloud.push_back(std::move(SEQ_Point[k]));
+			}
 		}
+
 	}
 }
 
