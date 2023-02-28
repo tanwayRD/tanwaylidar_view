@@ -27,12 +27,10 @@ public:
 public:
 	std::string m_localHost = "" ;
 	std::string m_lidarHost = "" ;
-	int m_localPointCloudPort = -1;
-	int m_localDIFPort = -1;
+	int m_localPort = -1;
 	int m_lidarPort = -1;
 	std::string m_frameID = "TanwayTP" ;
 	std::string m_topic = "/tanwaylidar_pointcloud" ;
-	std::string m_imuTopic = "/tanwaylidar_imu" ;
 
 	int m_lidarType = -1;
 
@@ -40,8 +38,10 @@ public:
 	double m_correctedAngle2 = 0;
 	double m_correctedAngle3 = 0;
 
-	double m_kValue = 1.0;
-	double m_bValue = 0.0;
+	double m_leftMoveAngle = 0;
+	double m_rightMoveAngle = 0;
+
+	double m_separateDistance = 4.0;
 };
 
 #endif

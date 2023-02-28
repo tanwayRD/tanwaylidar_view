@@ -23,7 +23,7 @@ mkdir -p ~/tanwaylidar_driver/src
 cd ~/tanwaylidar_driver/src
 ```
 
-1. 下载代码
+1. 下载代码（特殊维护项目请联系FAE获取）
 
 ```bash
 git clone https://github.com/tanwayLab/tanwaylidar_view.git
@@ -48,21 +48,19 @@ source ~/.bashrc
 
 1. 修改电脑IP为与雷达通信的IP，默认为"192.168.111.204"
 
-1. 运行程序，正常查看点云 
+1. 运行程序，正常查看点云
 
 ```bash
 【以TensorPro设备为例】roslaunch tanwaylidar_view TensorPro.launch
 【以Scope设备为例】roslaunch tanwaylidar_view Scope.launch
 【以TSP03-32设备为例】roslaunch tanwaylidar_view TSP03-32.launch
 【以Scope-192设备为例】roslaunch tanwaylidar_view Scope-192.launch
-【以ScopeMiniA2-192设备为例】roslaunch tanwaylidar_view ScopeMiniA2-192.launch
-【以Duetto设备为例】roslaunch tanwaylidar_view Duetto.launch
 ```
 
 ![](./resource/pic/example.png "")
 
 
-# IP修改工具使用(仅支持TensorPro)
+# IP修改工具使用
 
 ```bash
 rosrun tanwaylidar_view tensorpro_interfaces
@@ -129,17 +127,6 @@ rosrun tanwaylidar_view tensorpro_interfaces
 | tanwaylidar_view v2.0.4 | 2022年03月26日 | 修改Scope-192默认组修正角度值，更新跨平台SDK版本到1.0.4 |
 | tanwaylidar_view v2.0.5 | 2022年04月20日 | 更新sdk版本，增加对Duetto设备的支持，更新跨平台SDK版本到1.0.5 |
 | tanwaylidar_view v2.0.6 | 2022年06月23日 | 更新跨平台SDK版本到1.0.6 |
-| tanwaylidar_view v2.0.7 | 2022年09月20日 | 更新跨平台SDK版本到1.0.7，增加ScopeMiniA2-192设备型号的支持 |
-| tanwaylidar_view v2.0.8 | 2022年10月15日 | 更新Duetto的launch文件支持标定参数输入；<br />修改ScopeMiniA2-192设备默认的组修正角度值； |
-| tanwaylidar_view v2.0.9 | 2022年10月18日 | 更新跨平台SDK版本到1.0.9 |
-| tanwaylidar_view v2.0.10 | 2022年10月22日 | 更新跨平台SDK版本到1.0.10 |
-| tanwaylidar_view v2.0.11 | 2022年10月24日 | 更新跨平台SDK版本到1.0.11，并扩展点云数据中点的属性信息：<br />通道、水平角度、块标志、时间信息等 |
-| tanwaylidar_view v2.0.12 | 2022年11月16日 | 更新跨平台SDK版本到1.0.12；修改Scope-192.launch文件中默认组修正角度值为0、-0.12、-0.24 |
-| tanwaylidar_view v2.0.13 | 2022年11月21日 | 更新跨平台SDK版本到1.0.13；修改ROS发布点云时间值取跨平台SDK中点云帧的时间值； |
-| tanwaylidar_view v2.0.14 | 2022年11月28日 | 更新跨平台SDK版本到1.0.14； |
-| tanwaylidar_view v2.1.0 | 2022年12月06日 | 更新跨平台SDK版本到1.1.0；取消Duetto.launch文件中对标定参数的配置，由SDK解析获取； |
-| tanwaylidar_view v2.1.1 | 2022年12月29日 | 更新跨平台SDK版本到1.1.1；增加对IMU数据的接收并推送ROS消息； |
-| tanwaylidar_view v2.1.2 | 2023年01月05日 | 修改设备launch文件配置，解决配置参数不生效问题； |
-| tanwaylidar_view v2.1.3 | 2023年01月10日 | 更新跨平台SDK版本到1.1.2；修改Duetto设备型号的launch文件配置，增加K、B值设置参数； |
-| tanwaylidar_view v2.1.4 | 2023年01月10日 | 更新跨平台SDK版本到1.1.3； |
-| tanwaylidar_view v2.1.5 | 2023年01月30日 | 更新跨平台SDK版本到1.1.4； |
+| tanwaylidar_view v2.0.7 | 2023年01月07日 | 增加设备型号ScopeMiniA2-192的支持； |
+| tanwaylidar_view v2.0.8 | 2023年01月12日 | 修改SDK滤除计算策略，限制指定通道和距离； |
+| tanwaylidar_view v2.0.8.2.1 | 2023年02月28日 | AB+C拼接处理；FPGA-TDC对应count值换算距离、脉宽方式的修改 |

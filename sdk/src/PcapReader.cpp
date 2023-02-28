@@ -35,8 +35,8 @@
 #include "CommonDefine.h"
 
 
-PcapReader::PcapReader(std::string filePath, std::string lidarIP, int localPort, int localDIFPort, PackageCache& packageCache, bool repeat, std::mutex* mutex)
-	: m_pacpPath(filePath), m_lidarIP(lidarIP), m_localPort(localPort), m_localDIFPort(localDIFPort), m_packageCache(packageCache), m_repeat(repeat), m_mutex(mutex)
+PcapReader::PcapReader(std::string filePath, std::string lidarIP, int localPort, PackageCache& packageCache, bool repeat, std::mutex* mutex)
+	: m_pacpPath(filePath), m_lidarIP(lidarIP), m_localPort(localPort), m_packageCache(packageCache), m_repeat(repeat), m_mutex(mutex)
 {
 	m_pause.store(false);
 	run_read.store(false);
@@ -115,11 +115,6 @@ void PcapReader::ThreadLoadProcess()
 			if (m_pause)
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-				//clear cash time
-				last_tv_sec = 0;
-				last_tv_usec = 0;
-				
 				continue;
 			}
 
@@ -135,7 +130,6 @@ void PcapReader::ThreadLoadProcess()
 			{
 				last_tv_sec = pcap_pkt_hdr.tv_sec;
 				last_tv_usec = pcap_pkt_hdr.tv_usec;
-				beginPlayTime = std::chrono::system_clock::now();
 			}
 			else
 			{
@@ -185,7 +179,7 @@ void PcapReader::ThreadLoadProcess()
 			if (m_lidarIP != ip_hdr.GetSourceIP() || ip_hdr.protocol != 17)
 			{
 				//ignore
-				inStream.seekg(pcap_pkt_hdr.len - sizeof(NETHdr) - sizeof(IPHdr), std::ios::cur);
+				inStream.seekg(ip_hdr.GetLength() - sizeof(IPHdr), std::ios::cur);
 				continue;
 			}
 
@@ -195,12 +189,10 @@ void PcapReader::ThreadLoadProcess()
 			if (readSize != sizeof(UDPHdr)) 
 				break;
 			//check invalid
-			if (m_localPort != udp_hdr.GetDestPort() && 
-				10110 != udp_hdr.GetDestPort() &&
-				m_localDIFPort != udp_hdr.GetDestPort())
+			if (m_localPort != udp_hdr.GetDestPort() && 10110 != udp_hdr.GetDestPort())
 			{
 				//ignore
-				inStream.seekg(pcap_pkt_hdr.len - sizeof(NETHdr) - sizeof(IPHdr) - sizeof(UDPHdr), std::ios::cur);
+				inStream.seekg(udp_hdr.GetLength() - sizeof(UDPHdr), std::ios::cur);
 				continue;
 			}
 

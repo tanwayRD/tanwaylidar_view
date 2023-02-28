@@ -16,41 +16,11 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl_ros/point_cloud.h> //use these to convert between PCL and ROS datatypes
-#include <sensor_msgs/Imu.h>
 #include <pcl/conversions.h>
 
-ros::Publisher rosPublisher; 
-ros::Publisher rosIMUPublisher; 
+ros::Publisher rosPublisher;
 
-struct TanwayPCLEXPoint
-{
-  PCL_ADD_POINT4D;
-
-	float intensity;
-  	int channel;
-	float angle;
-	int echo;
-	int block;				/*For duetto*/
-  	unsigned int t_sec;     /* The value represents seconds since 1900-01-01 00:00:00 (the UNIX epoch).*/ 
-	unsigned int t_usec;    /* remaining microseconds */
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-} EIGEN_ALIGN16;
-
-POINT_CLOUD_REGISTER_POINT_STRUCT(TanwayPCLEXPoint,
-                                  (float, x, x)
-                                  (float, y, y)
-                                  (float, z, z)
-                                  (float, intensity, intensity)
-                                  (int, channel, channel)
-                                  (float, angle, angle)	
-                                  (int, echo, echo)
-								  (int, block, block)
-								  (unsigned int, t_sec, t_sec)
-								  (unsigned int, t_usec, t_usec)
-                                 )
-
-
-void pointCloudCallback(TWPointCloud<TanwayPCLEXPoint>::Ptr twPointCloud)
+void pointCloudCallback(TWPointCloud<pcl::PointXYZI>::Ptr twPointCloud)
 {
 	/*
 	*The point cloud struct uses a smart pointer. 
@@ -63,39 +33,17 @@ void pointCloudCallback(TWPointCloud<TanwayPCLEXPoint>::Ptr twPointCloud)
 	
 	
 	//to pcl point cloud
-	pcl::PointCloud<TanwayPCLEXPoint> cloud;
+	pcl::PointCloud<pcl::PointXYZI> cloud;
 	cloud.width = twPointCloud->width;
 	cloud.height = twPointCloud->height;
 	cloud.header.frame_id = twPointCloud->frame_id;
-	cloud.header.stamp = twPointCloud->stamp;
 	cloud.points.assign(twPointCloud->m_pointData.begin(), twPointCloud->m_pointData.end());
 
 	//to ros point cloud
 	sensor_msgs::PointCloud2 rosPointCloud; 
 	pcl::toROSMsg(cloud, rosPointCloud); //convert between PCL and ROS datatypes
-	rosPublisher.publish(rosPointCloud); //Publish point cloud
-}
-
-void imuCallback(const TWIMUData& imu)
-{
-	/*
-	*Avoid directly operating the UI in the callback function.
-	*/
-	sensor_msgs::Imu imu_data;
-	uint32_t sec = imu.stamp/1000000;
-	uint32_t nsec = (imu.stamp - sec*1000000) * 1000;
-	imu_data.header.stamp =ros::Time(sec, nsec) ;
-	imu_data.header.frame_id = imu.frame_id;
-
-	imu_data.linear_acceleration.x = imu.linear_acceleration[0]; 
-	imu_data.linear_acceleration.y = imu.linear_acceleration[1];
-	imu_data.linear_acceleration.z = imu.linear_acceleration[2];
-
-	imu_data.angular_velocity.x = imu.angular_velocity[0]; 
-	imu_data.angular_velocity.y = imu.angular_velocity[1]; 
-	imu_data.angular_velocity.z = imu.angular_velocity[2];
-
-	rosIMUPublisher.publish(imu_data); //Publish IMU
+	rosPointCloud.header.stamp = ros::Time::now(); //Get ROS system time
+	rosPublisher.publish(rosPointCloud); //Publish cloud
 }
 
 void gpsCallback(std::string gps_value)
@@ -134,23 +82,23 @@ int main(int argc, char** argv)
 	LaunchConfig launchConfig;
 	launchConfig.ReadLaunchParams(nh_private);
 	rosPublisher = nh.advertise<sensor_msgs::PointCloud2> (launchConfig.m_topic, 1);
-	rosIMUPublisher = nh.advertise<sensor_msgs::Imu> (launchConfig.m_imuTopic, 1);
 
-	TanwayLidarSDK<TanwayPCLEXPoint> lidar(launchConfig.m_lidarHost, launchConfig.m_localHost, launchConfig.m_localPointCloudPort, launchConfig.m_localDIFPort, (TWLidarType)(launchConfig.m_lidarType));
+	TanwayLidarSDK<pcl::PointXYZI> lidar(launchConfig.m_lidarHost, launchConfig.m_localHost, launchConfig.m_localPort, (TWLidarType)(launchConfig.m_lidarType));
 	lidar.RegPointCloudCallback(pointCloudCallback);
-	lidar.RegIMUDataCallback(imuCallback);
 	lidar.RegGPSCallback(gpsCallback);
 	lidar.RegExceptionCallback(exceptionCallback);
 	if (LT_TSP0332 == launchConfig.m_lidarType)
 		lidar.SetCorrectedAngleToTSP0332(launchConfig.m_correctedAngle1, launchConfig.m_correctedAngle2);
 	else if (LT_Scope192 == launchConfig.m_lidarType)
+	{
 		lidar.SetCorrectedAngleToScope192(launchConfig.m_correctedAngle1, launchConfig.m_correctedAngle2, launchConfig.m_correctedAngle3);
+		lidar.SetSeparateDistance(launchConfig.m_separateDistance);
+	}
 	else if (LT_ScopeMiniA2_192 == launchConfig.m_lidarType)
-		lidar.SetCorrectionAngleToScopeMiniA2_192(launchConfig.m_correctedAngle1, launchConfig.m_correctedAngle2, launchConfig.m_correctedAngle3);
-	else if (LT_Duetto == launchConfig.m_lidarType)
-		lidar.SetCorrectKBValueToDuetto(launchConfig.m_kValue, launchConfig.m_bValue);
-
-
+	{
+		lidar.SetCorrectedAngleToScopeMiniA2_192(launchConfig.m_correctedAngle1, launchConfig.m_correctedAngle2, launchConfig.m_correctedAngle3);
+		lidar.SetSeparateDistance(launchConfig.m_separateDistance);
+	}
 	lidar.Start();
 
 	while (ros::ok())

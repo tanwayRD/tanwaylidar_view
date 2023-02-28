@@ -32,18 +32,15 @@
 */
 
 #include "../TanwayLidarSDK.h"
- 
+
 //point struct
 struct PointXYZ
 {
 	float x;
 	float y;
 	float z;
-	float intensity;
-	//int channel;
-	//float angle;
-	//int echo;
-	//int block;				/*For duetto*/
+	int channel;
+	//float intensity;
 	unsigned int t_sec;         /* The value represents seconds since 1900-01-01 00:00:00 (the UNIX epoch).*/ 
 	unsigned int t_usec;        /* remaining microseconds */
 };
@@ -86,44 +83,22 @@ int main()
 	*Real-time connection using lidar. 
 	*If you have PCL installed, you can also use the point type 'pcl::PointXYZI' like this 'TanwayLidarSDK<pcl::PointXYZI> lidar';
 	*/
-
-
-	//example:TensorPro
-	//TanwayLidarSDK<PointXYZ> lidar("192.168.111.51", "192.168.111.204", 5600, 0, LT_TensorPro);
+	//TanwayLidarSDK<PointXYZ> lidar("192.168.111.51", "192.168.111.204", 5600, LT_TSP0332);
 	//lidar.RegPointCloudCallback(pointCloudCallback);
 	//lidar.RegGPSCallback(gpsCallback);
 	//lidar.RegExceptionCallback(exceptionCallback);
 	//lidar.Start();
-
-	//example:LT_TSP0332
-	//TanwayLidarSDK<PointXYZ> lidar("192.168.111.51", "192.168.111.204", 5600, 0, LT_TSP0332);
-	//lidar.RegPointCloudCallback(pointCloudCallback);
-	//lidar.RegGPSCallback(gpsCallback);
-	//lidar.RegExceptionCallback(exceptionCallback);
-	//lidar.Start();
-
-	//example:LT_Scope
-	//TanwayLidarSDK<PointXYZ> lidar("192.168.111.51", "192.168.111.204", 5600, 0, LT_Scope);
-	//lidar.RegPointCloudCallback(pointCloudCallback);
-	//lidar.RegGPSCallback(gpsCallback);
-	//lidar.RegExceptionCallback(exceptionCallback);
-	//lidar.Start();
-
-	//example:Duetto
-	TanwayLidarSDK<PointXYZ> lidar("192.168.111.51", "192.168.111.204", 5600, 5700, LT_Duetto);
-	lidar.RegPointCloudCallback(pointCloudCallback);
-	lidar.RegGPSCallback(gpsCallback);
-	lidar.RegExceptionCallback(exceptionCallback);
-	lidar.Start();
 
 	/*
 	*using pcap file to replay.
 	*/
-	//TanwayLidarSDK<PointXYZ> lidar("E:/record/Duetto/duetto.pcap", "192.168.111.51", 5600, 5700, LT_Duetto, true);
-	//lidar.RegPointCloudCallback(pointCloudCallback);
-	//lidar.RegGPSCallback(gpsCallback);
-	//lidar.RegExceptionCallback(exceptionCallback);
-	//lidar.Start();
+	TanwayLidarSDK<PointXYZ> lidar("E:/record/32/tsp32_distrub.pcap", "192.168.111.51", 5600, LT_TSP0332, true);
+	lidar.RegPointCloudCallback(pointCloudCallback);
+	lidar.RegGPSCallback(gpsCallback);
+	lidar.RegExceptionCallback(exceptionCallback);
+	lidar.SetCorrectedAngleToScope192(0.0f, 0.1f, 0.2f);
+	lidar.SetCorrectedAngleToTSP0332(0.0f, -6.0f);
+	lidar.Start();
 	
 
 	//quit

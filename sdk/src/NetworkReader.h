@@ -37,26 +37,22 @@
 class NetworkReader
 {
 public:
-	NetworkReader(TWLidarType lidarType, std::string lidarIP, std::string localIP,int localPointCloudPort, int localDIFPort, PackageCache& packageCache, std::mutex* mutex);
+	NetworkReader(std::string lidarIP, std::string localIP,int localPort, PackageCache& packageCache, std::mutex* mutex);
 	~NetworkReader();
 
 	void Start();
 
 	void ThreadProcessPointCloud();
 	void ThreadProcessGPS();
-	void ThreadProcessDIF();
 	void RegExceptionCallback(const std::function<void(const TWException&)>& callback);
 
 private:
-	TWLidarType m_lidarType;
 	std::string m_lidarIP;
 	std::string m_localIP;
-	int m_localPointCloudPort;
-	int m_localDIFPort;
+	int m_localPort;
 	std::atomic<bool>  run_read;
 	std::atomic<bool>  run_exit_pcloud;
 	std::atomic<bool>  run_exit_gps;
-	std::atomic<bool>  run_exit_dif;
 	std::mutex* m_mutex;
 
 	PackageCache& m_packageCache;
