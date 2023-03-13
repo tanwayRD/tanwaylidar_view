@@ -130,3 +130,4 @@ rosrun tanwaylidar_view tensorpro_interfaces
 | tanwaylidar_view v2.0.7 | 2023年01月07日 | 增加设备型号ScopeMiniA2-192的支持； |
 | tanwaylidar_view v2.0.8 | 2023年01月12日 | 修改SDK滤除计算策略，限制指定通道和距离； |
 | tanwaylidar_view v2.0.8.2.1 | 2023年02月28日 | AB+C拼接处理；FPGA-TDC对应count值换算距离、脉宽方式的修改 |
+| tanwaylidar_view v2.0.8.2.2 | 2023年03月13日 | 修改有效视场角度范围30-155； |
