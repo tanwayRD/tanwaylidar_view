@@ -113,14 +113,13 @@ protected:
 
 public:
 	double m_startAngle = 30.0;
-	double m_endAngle = 150.0;
+	double m_endAngle = 155.0;
 	double m_scopeABaddCSeparateDist = 4.0;
 protected:
 	double m_firstSeparateAngle = -1;
 	double m_calRA = (float)(3.14159265f / 180.0f);
-	double m_calPulse = 0.032;
-	//double m_calSimple = 500 * 2.997924 / 10.f / 16384.f / 2;  普通TDC
-	double m_calSimple = 0.032 * 2.997924 / 10.f / 2; //FPGA-TDC
+	double m_calPulse = 0.004577 / 0.15;
+	double m_calSimple = 500 * 2.997924 / 10.f / 16384.f / 2;
 
 	//192 valid correction
 	double m_corHeight = -1.15;
