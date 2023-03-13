@@ -113,7 +113,7 @@ protected:
 
 public:
 	double m_startAngle = 30.0;
-	double m_endAngle = 150.0;
+	double m_endAngle = 155.0;
 	double m_scopeABaddCSeparateDist = 4.0;
 protected:
 	double m_firstSeparateAngle = -1;
