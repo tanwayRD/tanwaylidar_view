@@ -47,6 +47,8 @@ public:
 	void ThreadProcessDIF();
 	void RegExceptionCallback(const std::function<void(const TWException&)>& callback);
 
+	bool SendData(const char* ptr, int length);
+
 private:
 	TWLidarType m_lidarType;
 	std::string m_lidarIP;

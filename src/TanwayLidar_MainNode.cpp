@@ -98,6 +98,13 @@ void imuCallback(const TWIMUData& imu)
 	rosIMUPublisher.publish(imu_data); //Publish IMU
 }
 
+void deliveryCalibrateCallback(const char* ptr, int length)
+{
+	/*
+	
+	*/
+}
+
 void gpsCallback(std::string gps_value)
 {
 	/*
@@ -143,6 +150,7 @@ int main(int argc, char** argv)
 		lidar.RegPointCloudCallback(pointCloudCallback);
 		lidar.RegIMUDataCallback(imuCallback);
 		lidar.RegGPSCallback(gpsCallback);
+		lidar.RegDeliveryCalibrateCallback(deliveryCalibrateCallback);
 		lidar.RegExceptionCallback(exceptionCallback);
 		lidar.SetTransform(
 			launchConfig.m_transformRotateX, 
