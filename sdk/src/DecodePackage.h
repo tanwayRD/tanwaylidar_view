@@ -118,9 +118,10 @@ public:
 protected:
 	double m_firstSeparateAngle = -1;
 	double m_calRA = (float)(3.14159265f / 180.0f);
-	double m_calPulse = 0.032;
-	//double m_calSimple = 500 * 2.997924 / 10.f / 16384.f / 2;  普通TDC
-	double m_calSimple = 0.032 * 2.997924 / 10.f / 2; //FPGA-TDC
+	double m_calPulse_fpga_tdc = 0.032;
+	double m_calPulse = 0.004577 / 0.15;
+	double m_calSimple_fpga_tdc = 0.032 * 2.997924 / 10.f / 2; //FPGA-TDC
+	double m_calSimple = 500 * 2.997924 / 10.f / 16384.f / 2;
 
 	//192 valid correction
 	double m_corHeight = -1.15;
@@ -316,7 +317,11 @@ void DecodePackage<PointT>::FilterDisturbPoint(char* blockPrev, char* blockNext,
 		{
 			//计算距离 单回波
 			double hexToInt1 = TwoHextoInt(blockPrev[seq * 8 + 0], blockPrev[seq * 8 + 1]);
-			prevDistance[seq] = hexToInt1 * m_calSimple;
+			if (m_lidarType == LT_ScopeMiniA2_192) {
+				prevDistance[seq] = hexToInt1 * m_calSimple_fpga_tdc;
+			} else {
+				prevDistance[seq] = hexToInt1 * m_calSimple;
+			}
 		}
 
 		//计算block_mid距离值
@@ -324,7 +329,11 @@ void DecodePackage<PointT>::FilterDisturbPoint(char* blockPrev, char* blockNext,
 		{
 			//计算距离 单回波
 			double hexToInt1 = TwoHextoInt(blockMid[seq * 8 + 0], blockMid[seq * 8 + 1]);
-			midDistance[seq] = hexToInt1 * m_calSimple;
+			if (m_lidarType == LT_ScopeMiniA2_192) {
+				midDistance[seq] = hexToInt1 * m_calSimple_fpga_tdc;
+			} else {
+				midDistance[seq] = hexToInt1 * m_calSimple;
+			}
 		}
 
 		//计算block_next距离值
@@ -332,7 +341,12 @@ void DecodePackage<PointT>::FilterDisturbPoint(char* blockPrev, char* blockNext,
 		{
 			//计算距离 单回波
 			double hexToInt1 = TwoHextoInt(blockNext[seq * 8 + 0], blockNext[seq * 8 + 1]);
-			nextDistance[seq] = hexToInt1 * m_calSimple;
+			
+			if (m_lidarType == LT_ScopeMiniA2_192) {
+				nextDistance[seq] = hexToInt1 * m_calSimple_fpga_tdc;
+			} else {
+				nextDistance[seq] = hexToInt1 * m_calSimple;
+			}
 		}
 	}
 	else if (110 == protocol)
@@ -354,7 +368,11 @@ void DecodePackage<PointT>::FilterDisturbPoint(char* blockPrev, char* blockNext,
 		{
 			//计算距离
 			double hexToInt1 = TwoHextoInt(blockPrev[seq * 4 + 0], blockPrev[seq * 4 + 1]);
-			prevDistance[seq] = hexToInt1 * m_calSimple;
+			if (m_lidarType == LT_ScopeMiniA2_192) {
+				prevDistance[seq] = hexToInt1 * m_calSimple_fpga_tdc;
+			} else {
+				prevDistance[seq] = hexToInt1 * m_calSimple;
+			}
 		}
 		//计算block_mid距离值
 		for (int seq = 0; seq < 16; seq++)
@@ -362,13 +380,22 @@ void DecodePackage<PointT>::FilterDisturbPoint(char* blockPrev, char* blockNext,
 			//计算距离
 			double hexToInt1 = TwoHextoInt(blockMid[seq * 4 + 0], blockMid[seq * 4 + 1]);
 			midDistance[seq] = hexToInt1 * m_calSimple;
+			if (m_lidarType == LT_ScopeMiniA2_192) {
+				midDistance[seq] = hexToInt1 * m_calSimple_fpga_tdc;
+			} else {
+				midDistance[seq] = hexToInt1 * m_calSimple;
+			}
 		}
 		//计算block_next距离值
 		for (int seq = 0; seq < 16; seq++)
 		{
 			//计算距离
 			double hexToInt1 = TwoHextoInt(blockNext[seq * 4 + 0], blockNext[seq * 4 + 1]);
-			nextDistance[seq] = hexToInt1 * m_calSimple;
+			if (m_lidarType == LT_ScopeMiniA2_192) {
+				nextDistance[seq] = hexToInt1 * m_calSimple_fpga_tdc;
+			} else {
+				nextDistance[seq] = hexToInt1 * m_calSimple;
+			}
 		}
 	}
 
@@ -867,14 +894,14 @@ void DecodePackage<PointT>::UseDecodePointScopeMiniA2_192(int echo, int sepIndex
 	}
 
 	//distance
-	double L = hexL * m_calSimple;
+	double L = hexL * m_calSimple_fpga_tdc;
 	//分界距离后的叠加
 	if (0 == faceIndex && L < (m_scopeABaddCSeparateDist - 0.05)) L = 0;
 	if (1 == faceIndex && L < (m_scopeABaddCSeparateDist - 0.05)) L = 0;
 	if (2 == faceIndex && L > (m_scopeABaddCSeparateDist + 0.05)) L = 0;
 	if (L <= 0 || L > 300) return;
 
-	double intensity = hexPulseWidth * m_calPulse;
+	double intensity = hexPulseWidth * m_calPulse_fpga_tdc;
 
 	double x = L * (m_verticalChannelAngle_ScopeMiniA2_cos_vA_RA[channel - 1] * x_cal_1 + m_verticalChannelAngle_ScopeMiniA2_sin_vA_RA[channel - 1] * x_cal_2);
 	double y = L * (m_verticalChannelAngle_ScopeMiniA2_cos_vA_RA[channel - 1] * y_cal_1 + m_verticalChannelAngle_ScopeMiniA2_sin_vA_RA[channel - 1] * y_cal_2);
@@ -1636,7 +1663,7 @@ void DecodePackage<PointT>::DecodeScopeMiniA2_192(char* udpDataOri)
 			int channel = 65 - (16 * (blocks_num >= 4 ? blocks_num - 4 : blocks_num) + seq + 1);
 
 			//calculate
-			if (hexL1 * m_calSimple <= 10.0)
+			if (hexL1 * m_calSimple_fpga_tdc <= 10.0)
 			{
 				if ((blocks_num == 0 || blocks_num == 4) && seq == 0)
 				{
