@@ -113,7 +113,9 @@ protected:
 
 public:
 	double m_startAngle = 30.0;
-	double m_endAngle = 155.0;
+	double m_endAngle = 150.0;
+	double m_startAngle_ScopeMini = 30.0;
+	double m_endAngle_ScopeMini = 155.0;
 	double m_scopeABaddCSeparateDist = 4.0;
 protected:
 	double m_firstSeparateAngle = -1;
@@ -1628,7 +1630,7 @@ void DecodePackage<PointT>::DecodeScopeMiniA2_192(char* udpDataOri)
 			z_cal_2 = 2.0 * m_skewing_sin_scopeMiniA2_192[faceIndex] * m_skewing_sin_scopeMiniA2_192[faceIndex] - 1;
 		}
 
-		if (horizontalAngle < m_startAngle && 0 == faceIndex && m_pointCloudPtr->Size() != 0)
+		if (horizontalAngle < m_startAngle_ScopeMini && 0 == faceIndex && m_pointCloudPtr->Size() != 0)
 		{
 			m_pointCloudPtr->height = 1;
 			m_pointCloudPtr->width = m_pointCloudPtr->Size();
@@ -1641,7 +1643,7 @@ void DecodePackage<PointT>::DecodeScopeMiniA2_192(char* udpDataOri)
 			m_pointCloudPtr->Reserve(360);
 			continue;
 		}
-		if (horizontalAngle <m_startAngle || horizontalAngle > m_endAngle) continue;
+		if (horizontalAngle <m_startAngle_ScopeMini || horizontalAngle > m_endAngle_ScopeMini) continue;
 
 
 		//separate index
