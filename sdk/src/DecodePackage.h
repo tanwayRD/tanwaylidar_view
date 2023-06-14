@@ -149,10 +149,11 @@ protected:
 	inline bool IsEqualityFloat3(const double value1, const double value2);
 	inline bool IsEqualityFloat5(const double value1, const double value2);
 	inline void CalculateRotateAllPointCloud(TWPointData& point);
+	inline void OutlierFilter_Scope_USE5CH(float& L, const char* udpData, int blocksNum, int seq, int channel, float sequenceFilterThreshold, bool* bValidPointChannel64);
 
 public:
-	double m_startAngle = 30.0;
-	double m_endAngle = 150.0;
+	double m_startAngle = 33.0;
+	double m_endAngle = 140.0;
 	
 protected:
 	double m_firstSeparateAngle = -1;
@@ -1454,12 +1455,20 @@ void DecodePackage<PointT>::UseDecodeTempoA2(char* udpData, std::vector<TWPointD
 	double y_cal_2 = 0.0;
 	double z_cal_1 = 0.0;
 	double z_cal_2 = 0.0;
+
+	bool bValidPointSeq[64] = { false };
+	
+	float t = 0.15;
 	
 	for (int blocks_num = 0; blocks_num < 8; blocks_num++)
 	{
 		int offset = blocks_num * 140;
 		if (0 == blocks_num || 4 == blocks_num)
 		{
+			for (int i = 0; i < 64; i++)
+			{
+				bValidPointSeq[i] = false;
+			}
 			//horizontal angle index: 128-131
 			int HextoAngle = FourHexToInt(udpData[offset + 128], udpData[offset + 129], udpData[offset + 130], udpData[offset + 131]);
 			horizontalAngle = HextoAngle  * 0.00001;
@@ -1512,7 +1521,7 @@ void DecodePackage<PointT>::UseDecodeTempoA2(char* udpData, std::vector<TWPointD
 		{
 			double hexToInt1 = TwoHextoInt(udpData[offset + seq * 8 + 0], udpData[offset + seq * 8 + 1]);
 			double hexPulse1 = TwoHextoInt(udpData[offset + seq * 8 + 2], udpData[offset + seq * 8 + 3]);
-			double L_1 = hexToInt1 * m_calSimpleFPGA;
+			float L_1 = hexToInt1 * m_calSimpleFPGA;
 			int intensity1 = (hexPulse1 * m_calPulseFPGA) / ScopePulseMapValue*255.0 + 0.5;
 			double pulse_1 = intensity1 > 255 ? 255 : intensity1;
 
@@ -1527,6 +1536,8 @@ void DecodePackage<PointT>::UseDecodeTempoA2(char* udpData, std::vector<TWPointD
 			double cos_vA_RA = m_verticalChannelAngle_ScopeMiniA2_cos_vA_RA[channel - 1];
 			double sin_vA_RA = m_verticalChannelAngle_ScopeMiniA2_sin_vA_RA[channel - 1];
 
+			if (L_1 < 6.0f && L_1 > 0)
+				OutlierFilter_Scope_USE5CH(L_1, udpData, blocks_num, seq, channel, t, bValidPointSeq);
 			//echo1
 			{
 				DecodePackage::TWPointData basic_point;
@@ -2537,5 +2548,87 @@ void DecodePackage<PointT>::DecodeTSP48Polar(char* udpData)
 		setT_usec(basic_point, oriPoint.t_usec);
 		
 		m_pointCloudPtr->PushBack(std::move(basic_point));
+	}
+}
+
+template <typename PointT>
+inline void DecodePackage<PointT>::OutlierFilter_Scope_USE5CH(float& L, const char* udpData, int blocksNum, int seq, int channel, float sequenceFilterThreshold, bool* bValidPointChannel64)
+{
+
+	//通道数组值
+	int t_channel = 65 - channel - 1;
+	//if (bValidPointChannel[t_channel]) return;
+
+	double dDistances[6] = { L, 0, 0, 0, 0, 0 };
+
+	int offset = blocksNum * 140;
+	if (3 == blocksNum || 7 == blocksNum)
+	{
+		if (seq <= 10)
+		{
+			for (int i = 1; i < 6; i++)
+			{
+				double hexToInt1 = TwoHextoInt(udpData[offset + (seq + i) * 8 + 0], udpData[offset + (seq + i) * 8 + 1]);
+				dDistances[i] = hexToInt1 * m_calSimple;
+			}
+		}
+		else
+		{
+			if (! bValidPointChannel64[t_channel])
+				L = 0;
+			return;
+		}
+	}
+	else 
+	{
+		if (seq <= 10)
+		{
+			for (int i = 1; i < 6; i++)
+			{
+				double hexToInt1 = TwoHextoInt(udpData[offset + (seq + i) * 8 + 0], udpData[offset + (seq + i) * 8 + 1]);
+				dDistances[i] = hexToInt1 * m_calSimple;
+			}
+		}
+		else
+		{
+			//上block
+			for (int i = 1; i < 15 - seq + 1; i++)
+			{
+				double hexToInt1 = TwoHextoInt(udpData[offset + (seq + i) * 8 + 0], udpData[offset + (seq + i) * 8 + 1]);
+				dDistances[i] = hexToInt1 * m_calSimple;
+			}
+			//下block
+			offset = (blocksNum + 1) * 140;
+			for (int i = 0; i < 6 - (15 - seq + 1); i++)
+			{
+				double hexToInt1 = TwoHextoInt(udpData[offset + (seq + i) * 8 + 0], udpData[offset + (seq + i) * 8 + 1]);
+				dDistances[(15 - seq + 1) + i] = hexToInt1 * m_calSimple;
+			}
+		}
+	}
+	//对6个值求极差
+	float min = dDistances[0];
+	float max = dDistances[0];
+	for (int i=1; i<6; i++)
+	{
+		if (dDistances[i] < min)
+			min = dDistances[i];
+		if (dDistances[i] > max)
+			max = dDistances[i];
+	}
+
+	if (max - min <= sequenceFilterThreshold)
+	{
+		bValidPointChannel64[t_channel] = true;
+		bValidPointChannel64[t_channel + 1] = true;
+		bValidPointChannel64[t_channel + 2] = true;
+		bValidPointChannel64[t_channel + 3] = true;
+		bValidPointChannel64[t_channel + 4] = true;
+		bValidPointChannel64[t_channel + 5] = true;
+	}
+	else
+	{
+		if (!bValidPointChannel64[t_channel])
+			L = 0;
 	}
 }
