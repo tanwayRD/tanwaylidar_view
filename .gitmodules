@@ -1,0 +1,4 @@
+[submodule "sdk"]
+	path = sdk
+	url = git@github.com:tanwayRD/TanwayLidarSDK.git
+	branch = dev-hycan
