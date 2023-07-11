@@ -121,9 +121,9 @@ protected:
 	double m_firstSeparateAngle = -1;
 	double m_calRA = (float)(3.14159265f / 180.0f);
 	double m_calPulse_fpga_tdc = 0.032;
-	double m_calPulse = 0.004577 / 0.15;
-	double m_calSimple_fpga_tdc = 0.032 * 2.997924 / 10.f / 2; //FPGA-TDC
-	double m_calSimple = 500 * 2.997924 / 10.f / 16384.f / 2;
+	double m_calPulse = 0.0305176;
+	double m_calSimple_fpga_tdc = 0.004796;
+	double m_calSimple = 0.004574;
 
 	//192 valid correction
 	double m_corHeight = -1.15;
@@ -229,13 +229,13 @@ void DecodePackage<PointT>::SetCorrectionAngleToScope192(float angle1, float ang
 	ScopeB_Elevation_A_Correct = angle2 + (ScopeB_Elevation_A_Correct - ScopeB_Elevation_A);
 	ScopeC_Elevation_A_Correct = angle3 + (ScopeC_Elevation_A_Correct - ScopeC_Elevation_A);
 
-	m_skewing_sin_scope[0] = sin(ScopeA_Elevation_A_Correct * m_calRA);
-	m_skewing_sin_scope[1] = sin(ScopeB_Elevation_A_Correct * m_calRA);
-	m_skewing_sin_scope[2] = sin(ScopeC_Elevation_A_Correct * m_calRA);
+	m_skewing_sin_scope[0] = sin(-1.0 * ScopeA_Elevation_A_Correct * m_calRA);
+	m_skewing_sin_scope[1] = sin(-1.0 * ScopeB_Elevation_A_Correct * m_calRA);
+	m_skewing_sin_scope[2] = sin(-1.0 * ScopeC_Elevation_A_Correct * m_calRA);
 
-	m_skewing_cos_scope[0] = cos(ScopeA_Elevation_A_Correct * m_calRA);
-	m_skewing_cos_scope[1] = cos(ScopeB_Elevation_A_Correct * m_calRA);
-	m_skewing_cos_scope[2] = cos(ScopeC_Elevation_A_Correct * m_calRA);
+	m_skewing_cos_scope[0] = cos(-1.0 * ScopeA_Elevation_A_Correct * m_calRA);
+	m_skewing_cos_scope[1] = cos(-1.0 * ScopeB_Elevation_A_Correct * m_calRA);
+	m_skewing_cos_scope[2] = cos(-1.0 * ScopeC_Elevation_A_Correct * m_calRA);
 }
 
 template <typename PointT>
@@ -248,13 +248,13 @@ void DecodePackage<PointT>::SetCorrectionAngleToScopeMiniA2_192(float angle1, fl
 	m_skewing_scopeMiniA2_Angle_Correct[1] = angle2;
 	m_skewing_scopeMiniA2_Angle_Correct[2] = angle3;
 
-	m_skewing_sin_scopeMiniA2_192[0] = sin(angle1 * m_calRA);
-	m_skewing_sin_scopeMiniA2_192[1] = sin(angle2 * m_calRA);
-	m_skewing_sin_scopeMiniA2_192[2] = sin(angle3 * m_calRA);
+	m_skewing_sin_scopeMiniA2_192[0] = sin(-1.0 * angle1 * m_calRA);
+	m_skewing_sin_scopeMiniA2_192[1] = sin(-1.0 * angle2 * m_calRA);
+	m_skewing_sin_scopeMiniA2_192[2] = sin(-1.0 * angle3 * m_calRA);
 
-	m_skewing_cos_scopeMiniA2_192[0] = cos(angle1 * m_calRA);
-	m_skewing_cos_scopeMiniA2_192[1] = cos(angle2 * m_calRA);
-	m_skewing_cos_scopeMiniA2_192[2] = cos(angle3 * m_calRA);
+	m_skewing_cos_scopeMiniA2_192[0] = cos(-1.0 * angle1 * m_calRA);
+	m_skewing_cos_scopeMiniA2_192[1] = cos(-1.0 * angle2 * m_calRA);
+	m_skewing_cos_scopeMiniA2_192[2] = cos(-1.0 * angle3 * m_calRA);
 }
 
 template <typename PointT>
@@ -266,11 +266,11 @@ void DecodePackage<PointT>::SetSeparateDistance(float sepValue)
 template <typename PointT>
 void DecodePackage<PointT>::SetCorrectionAngleToTSP0332(float angle1, float angle2)
 {
-	m_skewing_sin_tsp[0] = sin(angle1 * m_calRA);
-	m_skewing_sin_tsp[1] = sin(angle2 * m_calRA);  //-6.0
+	m_skewing_sin_tsp[0] = sin(-1.0 * angle1 * m_calRA);
+	m_skewing_sin_tsp[1] = sin(-1.0 * angle2 * m_calRA);  //6.0
 
-	m_skewing_cos_tsp[0] = cos(angle1 * m_calRA);
-	m_skewing_cos_tsp[1] = cos(angle2 * m_calRA);
+	m_skewing_cos_tsp[0] = cos(-1.0 * angle1 * m_calRA);
+	m_skewing_cos_tsp[1] = cos(-1.0 * angle2 * m_calRA);
 }
 
 template <typename PointT>
@@ -576,13 +576,13 @@ DecodePackage<PointT>::DecodePackage(std::shared_ptr<PackageCache> packageCacheP
 	run_exit.store(false);
 
 	//Scope-192
-	m_skewing_sin_scope[0] = sin(ScopeA_Elevation_A_Correct * m_calRA);
-	m_skewing_sin_scope[1] = sin(ScopeB_Elevation_A_Correct * m_calRA);
-	m_skewing_sin_scope[2] = sin(ScopeC_Elevation_A_Correct * m_calRA);
+	m_skewing_sin_scope[0] = sin(-1.0 * ScopeA_Elevation_A_Correct * m_calRA);
+	m_skewing_sin_scope[1] = sin(-1.0 * ScopeB_Elevation_A_Correct * m_calRA);
+	m_skewing_sin_scope[2] = sin(-1.0 * ScopeC_Elevation_A_Correct * m_calRA);
 
-	m_skewing_cos_scope[0] = cos(ScopeA_Elevation_A_Correct* m_calRA);
-	m_skewing_cos_scope[1] = cos(ScopeB_Elevation_A_Correct * m_calRA);
-	m_skewing_cos_scope[2] = cos(ScopeC_Elevation_A_Correct * m_calRA);
+	m_skewing_cos_scope[0] = cos(-1.0 * ScopeA_Elevation_A_Correct* m_calRA);
+	m_skewing_cos_scope[1] = cos(-1.0 * ScopeB_Elevation_A_Correct * m_calRA);
+	m_skewing_cos_scope[2] = cos(-1.0 * ScopeC_Elevation_A_Correct * m_calRA);
 
 	for (int i = 0; i < 64; i++)
 	{
@@ -592,13 +592,13 @@ DecodePackage<PointT>::DecodePackage(std::shared_ptr<PackageCache> packageCacheP
 	}
 
 	//Scope-Mini-A2-192
-	m_skewing_sin_scopeMiniA2_192[0] = sin(m_skewing_scopeMiniA2_Angle_Correct[0] * m_calRA);
-	m_skewing_sin_scopeMiniA2_192[1] = sin(m_skewing_scopeMiniA2_Angle_Correct[1] * m_calRA);
-	m_skewing_sin_scopeMiniA2_192[2] = sin(m_skewing_scopeMiniA2_Angle_Correct[2] * m_calRA);
+	m_skewing_sin_scopeMiniA2_192[0] = sin(-1.0 * m_skewing_scopeMiniA2_Angle_Correct[0] * m_calRA);
+	m_skewing_sin_scopeMiniA2_192[1] = sin(-1.0 * m_skewing_scopeMiniA2_Angle_Correct[1] * m_calRA);
+	m_skewing_sin_scopeMiniA2_192[2] = sin(-1.0 * m_skewing_scopeMiniA2_Angle_Correct[2] * m_calRA);
 
-	m_skewing_cos_scopeMiniA2_192[0] = cos(m_skewing_scopeMiniA2_Angle_Correct[0] * m_calRA);
-	m_skewing_cos_scopeMiniA2_192[1] = cos(m_skewing_scopeMiniA2_Angle_Correct[1] * m_calRA);
-	m_skewing_cos_scopeMiniA2_192[2] = cos(m_skewing_scopeMiniA2_Angle_Correct[2] * m_calRA);
+	m_skewing_cos_scopeMiniA2_192[0] = cos(-1.0 * m_skewing_scopeMiniA2_Angle_Correct[0] * m_calRA);
+	m_skewing_cos_scopeMiniA2_192[1] = cos(-1.0 * m_skewing_scopeMiniA2_Angle_Correct[1] * m_calRA);
+	m_skewing_cos_scopeMiniA2_192[2] = cos(-1.0 * m_skewing_scopeMiniA2_Angle_Correct[2] * m_calRA);
 
 	for (int i = 0; i < 64; i++)
 	{
@@ -612,11 +612,11 @@ DecodePackage<PointT>::DecodePackage(std::shared_ptr<PackageCache> packageCacheP
 	//m_channelValid[32-1] = false;
 
 	//TSP03-32
-	m_skewing_sin_tsp[0] = sin(0.0 * m_calRA);
-	m_skewing_sin_tsp[1] = sin(-6.0 * m_calRA);  //-6.0
+	m_skewing_sin_tsp[0] = sin(-1.0 * 0.0 * m_calRA);
+	m_skewing_sin_tsp[1] = sin(-1.0 * 6.0 * m_calRA);  //6.0
 
-	m_skewing_cos_tsp[0] = cos(0.0 * m_calRA);
-	m_skewing_cos_tsp[1] = cos(-6.0 * m_calRA);
+	m_skewing_cos_tsp[0] = cos(-1.0 * 0.0 * m_calRA);
+	m_skewing_cos_tsp[1] = cos(-1.0 * 6.0 * m_calRA);
 
 	for (int i = 0; i < 16; i++)
 	{
@@ -909,7 +909,7 @@ void DecodePackage<PointT>::UseDecodePointScopeMiniA2_192(int echo, int sepIndex
 	double y = L * (m_verticalChannelAngle_ScopeMiniA2_cos_vA_RA[channel - 1] * y_cal_1 + m_verticalChannelAngle_ScopeMiniA2_sin_vA_RA[channel - 1] * y_cal_2);
 	double z = -L * (m_verticalChannelAngle_ScopeMiniA2_cos_vA_RA[channel - 1] * z_cal_1 + m_verticalChannelAngle_ScopeMiniA2_sin_vA_RA[channel - 1] * z_cal_2);
 
-	if (channel <= m_corChannel)
+	/*if (channel <= m_corChannel)
 	{
 		if (z < (m_corHeight - m_corHeightDown))
 		{
@@ -919,7 +919,7 @@ void DecodePackage<PointT>::UseDecodePointScopeMiniA2_192(int echo, int sepIndex
 		{
 			z = m_corHeight + m_corHeightUp;
 		}
-	}
+	}*/
 
 	if (!(m_channelValid[channel-1]) && L <= m_channelValidDistance) return;
 
@@ -1612,8 +1612,8 @@ void DecodePackage<PointT>::DecodeScopeMiniA2_192(char* udpDataOri)
 			if (faceIndex < 3 && fabs(m_skewing_scopeMiniA2_Angle_Correct[faceIndex] - (m_skewing_scopeMiniA2_Angle[faceIndex] + offsetAngle)) > 0.001)
 			{
 				m_skewing_scopeMiniA2_Angle_Correct[faceIndex] = m_skewing_scopeMiniA2_Angle[faceIndex] + offsetAngle;
-				m_skewing_sin_scopeMiniA2_192[faceIndex] = sin(m_skewing_scopeMiniA2_Angle_Correct[faceIndex] * m_calRA);
-				m_skewing_cos_scopeMiniA2_192[faceIndex] = cos(m_skewing_scopeMiniA2_Angle_Correct[faceIndex] * m_calRA);
+				m_skewing_sin_scopeMiniA2_192[faceIndex] = sin(-1.0 * m_skewing_scopeMiniA2_Angle_Correct[faceIndex] * m_calRA);
+				m_skewing_cos_scopeMiniA2_192[faceIndex] = cos(-1.0 * m_skewing_scopeMiniA2_Angle_Correct[faceIndex] * m_calRA);
 			}
 
 			double hA = 0.5 * (horizontalAngle ) * m_calRA;

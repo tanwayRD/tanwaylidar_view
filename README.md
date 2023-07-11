@@ -132,3 +132,4 @@ rosrun tanwaylidar_view tensorpro_interfaces
 | tanwaylidar_view v2.0.8.2.1 | 2023年02月28日 | AB+C拼接处理；FPGA-TDC对应count值换算距离、脉宽方式的修改 |
 | tanwaylidar_view v2.0.8.2.2 | 2023年03月13日 | 修改有效视场角度范围30-155； |
 | tanwaylidar_view v2.0.8.2.3 | 2023年06月03日 | 将共用参数分别绑定到对应型号雷达；修改TSP03-32水平角度范围为30°-150°；ScopeMiniA2-192水平角度范围保持不变（30°-155°）。|
+| tanwaylidar_view v2.0.8.2.4 | 2023年07月11日 | 修改ScopeMiniA2-192的镜面计算参数；修改TSP03-32的镜面应用角度从-6到6； |

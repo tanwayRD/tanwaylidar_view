@@ -31,7 +31,6 @@ void pointCloudCallback(TWPointCloud<pcl::PointXYZI>::Ptr twPointCloud)
 	//		  << " height:" << twPointCloud->height 
 	//		  << " point cloud size: " << twPointCloud->Size() << std::endl;
 	
-	
 	//to pcl point cloud
 	pcl::PointCloud<pcl::PointXYZI> cloud;
 	cloud.width = twPointCloud->width;
