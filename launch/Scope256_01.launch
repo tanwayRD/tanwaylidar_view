@@ -1,6 +1,6 @@
 <launch>
 	<node pkg="tanwaylidar_view" name="TanwayLidar_MainNode" type="TanwayLidar_MainNode" output = "screen">
-		<rosparam file="$(find tanwaylidar_view)/config/supplementary.yaml" command="load" />
+		<rosparam file="$(find tanwaylidar_view)/config/supplementary_01.yaml" command="load" />
 		<param name="frame_id" type="string" value="TanwayTP" />
 		<param name="topic" type="string" value="/tanwaylidar_pointcloud" />
 		<!--<param name="imu_topic" type="string" value="/tanwaylidar_imu" />-->

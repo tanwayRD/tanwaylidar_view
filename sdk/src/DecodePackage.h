@@ -64,6 +64,13 @@ MemberCheck(t_usec)
 #define TensorPulseMapValue 50
 #define ScopePulseMapValue	35
 
+extern bool g_enable;
+extern std::vector<int> g_AngleRanges;
+extern std::vector<int> g_ChannelRanges;
+extern double g_config1;
+extern double g_config2;
+extern std::vector<int> g_DiscardPoint;
+
 template <typename PointT>
 class DecodePackage
 {
@@ -146,8 +153,9 @@ protected:
 	virtual void UseDecodeTensor48Polar(char* udpData, std::vector<TWPointData>& pointCloud);
 	virtual void UseDecodeTensor48Depth(char* udpData, std::vector<TWPointData>& pointCloud);
 	virtual void UseDecodeScope256Polar(char* udpData, std::vector<TWPointData>& pointCloud);
-	virtual void UseDecodeScope256Depth(char* udpData, std::vector<TWPointData>& pointCloud);
 
+	virtual	bool GetTheDisAndPulseFromChannelAngle(const char* udpData, int channel, int angle, double& dis, double& pulse); //scope256 
+	virtual void UseDecodeScope256Depth(char* udpData, std::vector<TWPointData>& pointCloud);
 	virtual void ProcessPointCloud(){};
 
 protected:
@@ -159,6 +167,7 @@ protected:
 	inline bool IsEqualityFloat5(const double value1, const double value2);
 	inline void CalculateRotateAllPointCloud(TWPointData& point);
 	inline void JointabcProcess(TWPointData& point);
+	inline bool IsInTheCheckAngleChannelRange(int angle, int channel, int& top, int& down);//scope 256 
 
 public:
 	double m_startAngle = 30.0;
@@ -569,6 +578,23 @@ inline void DecodePackage<PointT>::JointabcProcess(TWPointData& point)
 		point.z = 0;
 	}
 }
+
+template <typename PointT> 
+inline bool DecodePackage<PointT>::IsInTheCheckAngleChannelRange(int angle, int channel, int& top, int& down) 
+{ 
+	for (size_t i = 0; i < g_AngleRanges.size(); i+=2) 
+	{ 
+		if(angle >= g_AngleRanges[i] && angle <= g_AngleRanges[i+1] && 
+		channel >= g_ChannelRanges[i] && channel <= g_ChannelRanges[i+1]) 
+		{ 
+			top = g_ChannelRanges[i+1] + 1; 
+			down = g_ChannelRanges[i] - 1; 
+			return true;
+		}
+	}
+	 
+	return false; 
+} 
 
 template <typename PointT>
 inline typename std::enable_if<!PointT_HasMember(PointT, x)>::type setX(PointT& point, const float& value)
@@ -2171,8 +2197,7 @@ void DecodePackage<PointT>::UseDecodeScope256Polar(char* udpData, std::vector<TW
 		double sin_delta = m_skewing_sin_scp256[mirror];
 
 		for (int seq = 0; seq < 16; seq++)
-		{
-			
+		{	
 			//2Byte 36-37
 			double hexHorAngle = TwoHextoInt(udpData[36 + offset_block + seq * 10], udpData[37 + offset_block + seq * 10]);
 			double horAngle = hexHorAngle * 0.01;
@@ -2209,6 +2234,52 @@ void DecodePackage<PointT>::UseDecodeScope256Polar(char* udpData, std::vector<TW
 			else if (1 == mirror)
 			{
 				channel = (0 == leftOrRight) ? (128 + signal_mirror_seq * 2 + 1) : (signal_mirror_seq * 2 + 1);
+			}
+
+			if(g_enable)
+			{
+				int top, down; 
+				if(IsInTheCheckAngleChannelRange(hexHorAngle, channel, top, down)) 
+				{ 
+					double topdis, toppulse;
+					double downdis, downpulse; 
+					if((GetTheDisAndPulseFromChannelAngle(udpData, top+1,  hexHorAngle , topdis, toppulse) ||   
+						GetTheDisAndPulseFromChannelAngle(udpData, top,  hexHorAngle , topdis, toppulse))&&( 
+						GetTheDisAndPulseFromChannelAngle(udpData, down,  hexHorAngle , downdis, downpulse)|| 
+						GetTheDisAndPulseFromChannelAngle(udpData, down-1,  hexHorAngle , downdis, downpulse))) 
+					{ 
+						double config_1 =  g_config1 / m_calSimpleFPGA; 
+						double config_2 =  g_config2 / m_calSimpleFPGA; 
+						if(std::abs( hexL1 - downdis ) > config_2 && std::abs( hexL1 - topdis ) > config_2) 
+						{		  
+							if (std::abs(topdis - downdis) < config_1) 
+							{ 
+								if (downdis!=0 && channel <= 192) 
+								{ 
+									L_1 = downdis * m_calSimpleFPGA; 
+									pulse_1 = downpulse; 
+								} 
+								else
+								{ 
+									L_1 = topdis * m_calSimpleFPGA; 
+									pulse_1 = toppulse; 
+								}
+							} 
+							else 
+							{ 
+								L_1 = 0; 
+							} 
+						} 
+					}
+				}
+
+				for (size_t i = 0; i < g_DiscardPoint.size(); i+=3)
+				{
+					if(hexHorAngle <= g_DiscardPoint[i+1] && 
+						hexHorAngle >= g_DiscardPoint[i] && 
+						channel == g_DiscardPoint[i+2]) 
+						L_1 = 0; 
+				}
 			}
 
 			//laser1/laser2
@@ -2311,6 +2382,105 @@ void DecodePackage<PointT>::UseDecodeScope256Polar(char* udpData, std::vector<TW
 		}
 	}
 }
+
+template <typename PointT> 
+bool DecodePackage<PointT>::GetTheDisAndPulseFromChannelAngle(const char* udpData, int channel, int angle, double& dis, double& pulse) 
+{ 
+	int needMirr = channel % 2; 
+	int needLorR = channel > 128 ? 0 : 1; 
+ 
+	// block 0-3 
+	unsigned char  hex_info_b1 = udpData[35]; 
+	unsigned char  hexLOrR_b1 = hex_info_b1; 
+	hexLOrR_b1 = hexLOrR_b1 << 7; 
+	unsigned short leftOrRight_b1 = hexLOrR_b1 >> 7; 
+ 
+	//mirror 
+	unsigned char  hexMirror_b1 = hex_info_b1; 
+	hexMirror_b1 = hexMirror_b1 << 5; 
+	unsigned short mirror_b1 = hexMirror_b1 >> 6; 
+ 
+	int hexHorAngle_b1 = TwoHextoInt(udpData[36], udpData[37]); 
+	 
+	// block 4-7 
+	unsigned char  hex_info_b2 = udpData[35 + 4 * 164]; 
+	unsigned char  hexLOrR_b2 = hex_info_b2; 
+	hexLOrR_b2 = hexLOrR_b2 << 7; 
+	unsigned short leftOrRight_b2 = hexLOrR_b2 >> 7; 
+ 
+	//mirror 
+	unsigned char  hexMirror_b2 = hex_info_b2; 
+	hexMirror_b2 = hexMirror_b2 << 5; 
+	unsigned short mirror_b2 = hexMirror_b2 >> 6; 
+ 
+	int hexHorAngle_b2 = TwoHextoInt(udpData[36 + 4 * 164], udpData[37 + 4 * 164]); 
+ 
+	int block, seq; 
+	if(angle == hexHorAngle_b1 && needMirr == mirror_b1 && needLorR == leftOrRight_b1) 
+	{ 
+		//std::cout<<"channel:"<<channel; 
+		if(mirror_b1 == 0) 
+		{ 
+			channel-=2; 
+		}else{ 
+			channel-=1; 
+		} 
+		if( leftOrRight_b1 == 0) 
+		{ 
+			channel = channel - 128; 
+		} 
+ 
+		channel = channel / 2; 
+		 
+		block = channel / 16; 
+		seq = channel % 16; 
+ 
+		int offset_block = block * 164; 
+ 
+		//L1 2Byte 40-41 
+		dis = TwoHextoInt(udpData[40 + offset_block + seq * 10], udpData[41 + offset_block + seq * 10]); 
+			 
+		//intensity 0-255 
+		unsigned char hexChar1 = udpData[42 + offset_block + seq * 10]; 
+		unsigned short hexPulse1 = hexChar1; 
+		pulse = hexPulse1; 
+ 
+		return true; 
+	} 
+ 
+	if(angle == hexHorAngle_b2 && needMirr == mirror_b2 && needLorR == leftOrRight_b2) 
+	{ 
+		if(mirror_b2 == 0) 
+		{ 
+			channel-=2; 
+		}else{ 
+			channel-=1; 
+		} 
+		if( leftOrRight_b2 == 0) 
+		{ 
+			channel = channel - 128; 
+		} 
+ 
+		channel = channel / 2; 
+		 
+		block = channel / 16 + 4; 
+		seq = channel % 16; 
+ 
+		int offset_block = block * 164; 
+ 
+		//L1 2Byte 40-41 
+		dis = TwoHextoInt(udpData[40 + offset_block + seq * 10], udpData[41 + offset_block + seq * 10]); 
+			 
+		//intensity 0-255 
+		unsigned char hexChar1 = udpData[42 + offset_block + seq * 10]; 
+		unsigned short hexPulse1 = hexChar1; 
+		pulse = hexPulse1; 
+ 
+		return true; 
+	} 
+ 
+	return false; 
+} 
 
 template <typename PointT>
 void DecodePackage<PointT>::UseDecodeScope256Depth(char* udpData, std::vector<TWPointData>& pointCloud)

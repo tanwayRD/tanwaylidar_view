@@ -11,6 +11,13 @@
 #include <LaunchConfig.h>
 #include "../sdk/TanwayLidarSDK.h"
 
+bool g_enable = false;
+std::vector<int> g_AngleRanges;
+std::vector<int> g_ChannelRanges;
+double g_config1 = 0.3;
+double g_config2 = 0.3;
+std::vector<int> g_DiscardPoint;
+
 LaunchConfig::LaunchConfig()
 {
 
@@ -64,6 +71,23 @@ void LaunchConfig::ReadLaunchParams(ros::NodeHandle& nh_private)
 		nh_private.param<double>("CorrectedAngle1", m_correctedAngle1, 0);
 		nh_private.param<double>("CorrectedAngle2", m_correctedAngle2, 0.1);
 		nh_private.param<double>("CorrectedAngle3", m_correctedAngle3, 0.2);
+	}
+	//Scope256-polar
+	else if(LT_Scope256_Polar == m_lidarType)
+	{
+		nh_private.getParam("Enable",g_enable);
+		if(g_enable){
+			nh_private.getParam("AngleRanges",g_AngleRanges);
+			nh_private.getParam("ChannelRanges",g_ChannelRanges);
+   			nh_private.getParam("Config_1", g_config1);
+			nh_private.getParam("Config_2", g_config2);
+			nh_private.getParam("DiscardPoint",g_DiscardPoint);
+
+			if(g_AngleRanges.size() != g_ChannelRanges.size() || g_ChannelRanges.size() % 2 != 0 || g_DiscardPoint.size() % 3 != 0){
+				ROS_WARN("yaml param is invalid!");
+				g_enable = false;
+			}
+		}
 	}
 }
 

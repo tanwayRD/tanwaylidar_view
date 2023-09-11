@@ -95,3 +95,4 @@ git clone https://github.com/TanwayLab/TanwayLidarSDK.git
 | v2.0.6  | 2023年08月22日  | 增加Scope256设备型号的支持；                                 |
 | v2.0.7  | 2023年08月29日  | 修改Scope256设备型号的解析公式，修复129-256通道的顺序颠倒问题； |
 | v2.0.8  | 2023年09月04日  | 修复Scope256设备型号“机芯出光角度”设定值解算异常的bug；      |
+| v2.0.9.3.3  | 2023年09月11日  | 增加针对scope256 polar的补点配置yaml文件； 1,2,4号雷达的yaml     |
