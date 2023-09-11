@@ -33,6 +33,8 @@
 #pragma once
 #include "PackageCache.h"
 #include "TWException.h"
+#include <pthread.h>
+#include <sched.h>
 
 class NetworkReader
 {
@@ -48,6 +50,7 @@ public:
 	void ThreadProcessDIF();
 	void RegExceptionCallback(const std::function<void(const TWException&)>& callback);
 
+	void SetCurrentThreadHighPriority(int value);
 private:
 	TWLidarType m_lidarType;
 	std::string m_lidarIP;

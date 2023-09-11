@@ -33,7 +33,8 @@
 #pragma once
 #include "PackageCache.h"
 #include "TWException.h"
-
+#include <pthread.h>
+#include <sched.h>
 
 #define MemberCheck(member) \
 template<typename T>\
@@ -109,6 +110,7 @@ private:
 	void InitBasicVariables();
 	void BeginDecodePackageData();
 	void CheckLostPacket(float angle, unsigned short mirror);
+	void CheckLostPacket(float angle, unsigned short mirror, unsigned short left_right);
 
 	void DecodeTensorLite(char* udpData, unsigned int t_sec, unsigned int t_usec);
 	void DecodeTensorPro(char* udpData, unsigned int t_sec, unsigned int t_usec);
@@ -131,7 +133,7 @@ private:
 	void DecodeDIFData_Tensor48Polar(char* udpData);
 	void DecodeDIFData_Scope256Polar(char* udpData);
 
-
+	void SetCurrentThreadHighPriority(int value);
 protected:
 	virtual void UseDecodeTensorPro(char* udpData, std::vector<TWPointData>& pointCloud);
 	virtual void UseDecodeTensorPro_echo2(char* udpData, std::vector<TWPointData>& pointCloud);
@@ -318,9 +320,9 @@ private:
 	int jointabc_two_face = 3; //A+B=1; A+C=2; B+C=3
 
 
-	//0:LT_TensorLite,1:LT_TensorPro,2:LT_TensorPro_echo2,3:LT_Scope,4:LT_TSP0332,5:LT_Scope192,6:LT_Duetto,7:LT_ScopeMiniA2_192
-	int TWLidarBlockCount[LT_Total] = {600, 600, 1200, 720*4, 1200, 720*4*3, 960*3, 720*4*3};
-	int TWLidarBlockCountOffset[LT_Total] = {2, 2, 4, 2*4, 4, 6*4, 6, 6*4};
+	//0:LT_TensorLite,1:LT_TensorPro,2:LT_TensorPro_echo2,3:LT_Scope,4:LT_TSP0332,5:LT_Scope192,6:LT_Duetto,7:LT_ScopeMiniA2_192,8:LT_TempoA2,9:LT_Tensor48_Polar,10:LT_Tensor48_Depth,11:LT_Scope256_Polar,12:LT_Scope256_Depth
+	int TWLidarBlockCount[LT_Total] = {600, 600, 1200, 720*4, 1200, 720*4*3, 960*3, 720*4*3, -1, 720*3, -1, 720*4*2*2};
+	int TWLidarBlockCountOffset[LT_Total] = {2, 2, 4, 2*4, 4, 6*4, 6, 6*4, -1, 8, -1, 4*2*2*2};
 private:
 	std::shared_ptr<PackageCache> m_packageCachePtr;
 	TWLidarType m_lidarType;
@@ -723,6 +725,50 @@ DecodePackage<PointT>::DecodePackage()
 {
 	InitBasicVariables();
 }
+template <typename PointT>
+void DecodePackage<PointT>::SetCurrentThreadHighPriority(int value)
+{
+	// Start out with a standard, low-priority setup for the sched params.
+  	 struct sched_param param; 
+  	bzero((void*)&param, sizeof(param));
+  	int policy = SCHED_FIFO;
+
+	pthread_getschedparam(pthread_self(), &policy, &param); 
+    printf("[Debug] Thread %ld scheduling policy is %s, priority is %d\n", (long)pthread_self(), 
+           (policy == SCHED_FIFO ? "SCHED_FIFO" : 
+            (policy == SCHED_RR ? "SCHED_RR" : 
+             (policy == SCHED_OTHER ? "SCHED_OTHER" : "unknown"))), 
+           param.sched_priority); 
+
+  	// If desired, set up high-priority sched params structure.
+  	if (value>0 && value<=10) 
+	{
+    	// FIFO scheduler, ranked above default SCHED_OTHER queue
+    	policy = SCHED_FIFO;
+    	// The priority only compares us to other SCHED_FIFO threads, so we
+    	// just pick a random priority halfway between min & max.
+    	const int priority = sched_get_priority_min(policy) + (sched_get_priority_max(policy) - sched_get_priority_min(policy)) / 10 * value;
+
+    	param.sched_priority = priority;
+		std::cout << "[Debug] Thread priority max:" << sched_get_priority_max(policy) << std::endl;
+		std::cout << "[Debug] Thread priority min:" << sched_get_priority_min(policy) << std::endl;
+		// Actually set the sched params for the current thread.
+		if (0 == pthread_setschedparam(pthread_self(), policy, &param)) 
+		{
+			std::cout << "[Debug] Thread" << pthread_self() << "using high-priority scheduler success!" << std::endl;
+			pthread_getschedparam(pthread_self(), &policy, &param); 
+			printf("[Debug] Thread %ld scheduling policy is %s, priority is %d\n", (long)pthread_self(), 
+				(policy == SCHED_FIFO ? "SCHED_FIFO" : 
+					(policy == SCHED_RR ? "SCHED_RR" : 
+					(policy == SCHED_OTHER ? "SCHED_OTHER" : "unknown"))), 
+				param.sched_priority); 
+		}
+		else
+		{
+			std::cout << "[Debug] Thread using high-priority scheduler failed!" << std::endl;
+		}
+  	}
+}
 
 template <typename PointT>
 void DecodePackage<PointT>::InitBasicVariables()
@@ -857,6 +903,7 @@ template <typename PointT>
 void DecodePackage<PointT>::BeginDecodePackageData()
 {
 	run_exit.store(false);
+	SetCurrentThreadHighPriority(5);
 	while (run_decode)
 	{
 		if (m_packageCachePtr->Size() <= 0)
@@ -992,7 +1039,7 @@ void DecodePackage<PointT>::CheckLostPacket(float angle, unsigned short mirror)
 			m_preBlockCount = m_curBlockCount;
 			m_curBlockCount = 0;
 			
-			m_bLostPacket = (m_preBlockCount >= (TWLidarBlockCount[m_lidarType]-TWLidarBlockCountOffset[m_lidarType]) && m_preBlockCount <= (TWLidarBlockCount[m_lidarType]+TWLidarBlockCountOffset[m_lidarType]));
+			m_bLostPacket = (m_preBlockCount <= (TWLidarBlockCount[m_lidarType]-TWLidarBlockCountOffset[m_lidarType]) || m_preBlockCount >= (TWLidarBlockCount[m_lidarType]+TWLidarBlockCountOffset[m_lidarType]));
 		}
 		if (angle >= m_startAngle && angle <= m_endAngle)
 		{
@@ -1006,21 +1053,50 @@ void DecodePackage<PointT>::CheckLostPacket(float angle, unsigned short mirror)
 			m_preBlockCount = m_curBlockCount;
 			m_curBlockCount = 0;
 			
-			m_bLostPacket = (m_preBlockCount >= (TWLidarBlockCount[m_lidarType]-TWLidarBlockCountOffset[m_lidarType]) && m_preBlockCount <= (TWLidarBlockCount[m_lidarType]+TWLidarBlockCountOffset[m_lidarType]));
+			m_bLostPacket = (m_preBlockCount <= (TWLidarBlockCount[m_lidarType]-TWLidarBlockCountOffset[m_lidarType]) || m_preBlockCount >= (TWLidarBlockCount[m_lidarType]+TWLidarBlockCountOffset[m_lidarType]));
 		}
 		if (angle >= m_startAngle && angle <= m_endAngle)
 		{
 			m_curBlockCount++;
 		}
 	}
-	else if (LT_Duetto == m_lidarType)
+	else if (LT_Duetto == m_lidarType || LT_Tensor48_Polar == m_lidarType)
 	{
 		if (angle < m_startAngle && 1 == mirror && m_curBlockCount > 0)
 		{
 			m_preBlockCount = m_curBlockCount;
 			m_curBlockCount = 0;
-			
-			m_bLostPacket = (m_preBlockCount >= (TWLidarBlockCount[m_lidarType]-TWLidarBlockCountOffset[m_lidarType]) && m_preBlockCount <= (TWLidarBlockCount[m_lidarType]+TWLidarBlockCountOffset[m_lidarType]));
+			// std::cout << "[Debug] Theoretical number of block: [" 
+			// 			<< TWLidarBlockCount[m_lidarType]-TWLidarBlockCountOffset[m_lidarType] 
+			// 			<< ", "
+			// 			<< TWLidarBlockCount[m_lidarType]+TWLidarBlockCountOffset[m_lidarType] 
+			// 			<< "] and the actual number of block: "
+			// 			<< m_preBlockCount << std::endl;
+			m_bLostPacket = (m_preBlockCount <= (TWLidarBlockCount[m_lidarType]-TWLidarBlockCountOffset[m_lidarType]) || m_preBlockCount >= (TWLidarBlockCount[m_lidarType]+TWLidarBlockCountOffset[m_lidarType]));
+		}
+		if (angle >= m_startAngle && angle <= m_endAngle)
+		{
+			m_curBlockCount++;
+		}
+	}
+}
+
+template <typename PointT>
+void DecodePackage<PointT>::CheckLostPacket(float angle, unsigned short mirror, unsigned short left_right)
+{
+	if (LT_Scope256_Polar == m_lidarType)
+	{
+		if (angle < m_startAngle && 1 == mirror && 0 == left_right && m_curBlockCount > 0)
+		{
+			m_preBlockCount = m_curBlockCount;
+			m_curBlockCount = 0;
+			// std::cout << "[Debug] Theoretical number of block: [" 
+			// 			<< TWLidarBlockCount[m_lidarType]-TWLidarBlockCountOffset[m_lidarType] 
+			// 			<< ", "
+			// 			<< TWLidarBlockCount[m_lidarType]+TWLidarBlockCountOffset[m_lidarType] 
+			// 			<< "] and the actual number of block: "
+			// 			<< m_preBlockCount << std::endl;
+			m_bLostPacket = (m_preBlockCount <= (TWLidarBlockCount[m_lidarType]-TWLidarBlockCountOffset[m_lidarType]) || m_preBlockCount >= (TWLidarBlockCount[m_lidarType]+TWLidarBlockCountOffset[m_lidarType]));
 		}
 		if (angle >= m_startAngle && angle <= m_endAngle)
 		{
@@ -1907,7 +1983,9 @@ void DecodePackage<PointT>::UseDecodeTensor48Polar(char* udpData, std::vector<TW
 			//2Byte 36-37
 			double hexHorAngle = TwoHextoInt(udpData[36 + offset_block + seq * 10], udpData[37 + offset_block + seq * 10]);
 			double horAngle = hexHorAngle * 0.01;
-			
+
+			if (0 == seq) CheckLostPacket(horAngle, mirror);
+
 			//L1 2Byte 40-41
 			double hexL1 = TwoHextoInt(udpData[40 + offset_block + seq * 10], udpData[41 + offset_block + seq * 10]);
 			double L_1 = hexL1 * m_calSimpleFPGA;
@@ -2098,7 +2176,9 @@ void DecodePackage<PointT>::UseDecodeScope256Polar(char* udpData, std::vector<TW
 			//2Byte 36-37
 			double hexHorAngle = TwoHextoInt(udpData[36 + offset_block + seq * 10], udpData[37 + offset_block + seq * 10]);
 			double horAngle = hexHorAngle * 0.01;
-			
+
+			if (0 == seq) CheckLostPacket(horAngle, mirror, leftOrRight);
+
 			//L1 2Byte 40-41
 			double hexL1 = TwoHextoInt(udpData[40 + offset_block + seq * 10], udpData[41 + offset_block + seq * 10]);
 			double L_1 = hexL1 * m_calSimpleFPGA;

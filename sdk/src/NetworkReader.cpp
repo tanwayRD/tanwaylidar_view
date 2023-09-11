@@ -57,7 +57,7 @@ void NetworkReader::Start()
 		run_exit_gps.store(false);
 		std::thread(std::bind(&NetworkReader::ThreadProcessGPS, this)).detach();
 	}
-	if (LT_Duetto == m_lidarType || LT_Tensor48_Polar == m_lidarType)
+	if (LT_Duetto == m_lidarType || LT_Tensor48_Polar == m_lidarType || LT_Scope256_Polar == m_lidarType)
 	{
 		run_exit_dif.store(false);
 		std::thread(std::bind(&NetworkReader::ThreadProcessDIF, this)).detach();
@@ -104,7 +104,7 @@ void NetworkReader::ThreadProcessPointCloud()
 	}
 #endif
 
-	
+	SetCurrentThreadHighPriority(9);
 
 	SocketT recvSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP); 
 
@@ -134,6 +134,23 @@ void NetworkReader::ThreadProcessPointCloud()
 		USE_EXCEPTION_ERROR(TWException::TWEC_ERROR_BIND_POINT, std::string("Bind port for point cloud socket error! "));
 		run_exit_pcloud.store(true);
 		return;
+	}
+
+	int opt_val = 4096 * 400;
+	socklen_t opt_len = sizeof(opt_val);
+
+	opt_val = opt_val*10;
+
+	if (setsockopt(recvSocket, SOL_SOCKET, SO_RCVBUF, &opt_val, opt_len) == -1) 
+		std::cout<<" set socket buf size failed "<<std::endl;
+	else{
+		std::cout<<" set socket buf size  "<<opt_val<<std::endl;
+	}
+
+	if (getsockopt(recvSocket, SOL_SOCKET, SO_RCVBUF, &opt_val, &opt_len) == -1) 
+		std::cout<<" get socket buf size failed "<<std::endl;
+	else{
+		std::cout<<" get socket buf size  "<<opt_val<<std::endl;
 	}
 
 	//time out
@@ -412,4 +429,48 @@ void NetworkReader::ThreadProcessDIF()
 void NetworkReader::RegExceptionCallback(const std::function<void(const TWException&)>& callback)
 {
 	m_funcException = callback;
+}
+
+void NetworkReader::SetCurrentThreadHighPriority(int value)
+{
+	// Start out with a standard, low-priority setup for the sched params.
+  	 struct sched_param param; 
+  	bzero((void*)&param, sizeof(param));
+  	int policy = SCHED_FIFO;
+
+	pthread_getschedparam(pthread_self(), &policy, &param); 
+    printf("[Debug] Thread %ld scheduling policy is %s, priority is %d\n", (long)pthread_self(), 
+           (policy == SCHED_FIFO ? "SCHED_FIFO" : 
+            (policy == SCHED_RR ? "SCHED_RR" : 
+             (policy == SCHED_OTHER ? "SCHED_OTHER" : "unknown"))), 
+           param.sched_priority); 
+
+  	// If desired, set up high-priority sched params structure.
+  	if (value>0 && value<=10) 
+	{
+    	// FIFO scheduler, ranked above default SCHED_OTHER queue
+    	policy = SCHED_FIFO;
+    	// The priority only compares us to other SCHED_FIFO threads, so we
+    	// just pick a random priority halfway between min & max.
+    	const int priority = sched_get_priority_min(policy) + (sched_get_priority_max(policy) - sched_get_priority_min(policy)) / 10 * value;
+
+    	param.sched_priority = priority;
+		std::cout << "[Debug] Thread priority max:" << sched_get_priority_max(policy) << std::endl;
+		std::cout << "[Debug] Thread priority min:" << sched_get_priority_min(policy) << std::endl;
+		// Actually set the sched params for the current thread.
+		if (0 == pthread_setschedparam(pthread_self(), policy, &param)) 
+		{
+			std::cout << "[Debug] Thread" << pthread_self() << "using high-priority scheduler success!" << std::endl;
+			pthread_getschedparam(pthread_self(), &policy, &param); 
+			printf("[Debug] Thread %ld scheduling policy is %s, priority is %d\n", (long)pthread_self(), 
+				(policy == SCHED_FIFO ? "SCHED_FIFO" : 
+					(policy == SCHED_RR ? "SCHED_RR" : 
+					(policy == SCHED_OTHER ? "SCHED_OTHER" : "unknown"))), 
+				param.sched_priority); 
+		}
+		else
+		{
+			std::cout << "[Debug] Thread using high-priority scheduler failed!" << std::endl;
+		}
+  	}
 }
