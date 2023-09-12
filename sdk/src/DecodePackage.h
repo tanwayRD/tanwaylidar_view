@@ -2250,16 +2250,35 @@ void DecodePackage<PointT>::UseDecodeScope256Polar(char* udpData, std::vector<TW
 					{ 
 						double config_1 =  g_config1 / m_calSimpleFPGA; 
 						double config_2 =  g_config2 / m_calSimpleFPGA; 
+						
 						if(std::abs( hexL1 - downdis ) > config_2 && std::abs( hexL1 - topdis ) > config_2) 
 						{		  
 							if (std::abs(topdis - downdis) < config_1) 
 							{ 
-								if (downdis!=0 && channel <= 192) 
-								{ 
-									L_1 = downdis * m_calSimpleFPGA; 
-									pulse_1 = downpulse; 
+								if (channel <= 192)
+								{
+									if (down==129 || down == 130)
+									{
+										L_1 = topdis * m_calSimpleFPGA; 
+									
+										pulse_1 = toppulse; 
+									}
+									else
+									{
+										L_1 = downdis * m_calSimpleFPGA; 
+										pulse_1 = downpulse; 
+									}
+									
 								} 
+
+								else if (down==129 || down == 130)
+									{
+										L_1 = topdis * m_calSimpleFPGA; 
+									
+										pulse_1 = toppulse; 
+									}
 								else
+								
 								{ 
 									L_1 = topdis * m_calSimpleFPGA; 
 									pulse_1 = toppulse; 
@@ -2270,7 +2289,14 @@ void DecodePackage<PointT>::UseDecodeScope256Polar(char* udpData, std::vector<TW
 								L_1 = 0; 
 							} 
 						} 
+						else
+						{
+							L_1 = 0; 
+						}
+						
 					}
+					
+
 				}
 
 				for (size_t i = 0; i < g_DiscardPoint.size(); i+=3)
