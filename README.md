@@ -28,7 +28,7 @@ cd ~/tanwaylidar_driver/src
 注意: 如需获取特定版本，请联系探维公司技术支持。
 
 ```bash
-git clone https://github.com/tanwayLab/tanwaylidar_view.git
+git clone https://github.com/TanwayLab/tanwaylidar_view.git
 cd sdk
 git submodule init
 git submodule update
