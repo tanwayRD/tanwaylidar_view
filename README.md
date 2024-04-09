@@ -29,7 +29,7 @@ cd ~/tanwaylidar_driver/src
 
 ```bash
 git clone https://github.com/TanwayLab/tanwaylidar_view.git
-cd sdk
+cd tanwaylidar_view/sdk
 git submodule init
 git submodule update
 ```
